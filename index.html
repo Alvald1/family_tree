@@ -58,12 +58,19 @@
         let isDragging = false;
         let translateX = 0;
         let translateY = 0;
-        let startX, startY, initialTranslateX, initialTranslateY;
-
-        // Загрузка SVG
+        let startX, startY, initialTranslateX, initialTranslateY;        // Загрузка SVG
         async function loadSVG() {
             try {
-                const response = await fetch('family_tree_vector.svg');
+                // Добавляем случайный параметр для отключения кэширования
+                const timestamp = new Date().getTime();
+                const response = await fetch(`family_tree_vector.svg?t=${timestamp}`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (response.ok) {
                     const svgText = await response.text();
                     document.getElementById('svgContainer').innerHTML = svgText;

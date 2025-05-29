@@ -19,8 +19,14 @@ class StaticFileHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def end_headers(self):
-        # Добавляем заголовки для корректного отображения SVG и поддержки CORS
+        # Добавляем заголовки для корректного отображения SVG и отключения
+        # кэширования
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header(
+            'Cache-Control',
+            'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         if self.path.endswith('.svg'):
             self.send_header('Content-Type', 'image/svg+xml')
         super().end_headers()
