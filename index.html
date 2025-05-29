@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генеалогическое дерево</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 100%;
+            overflow: auto;
+        }
+
+        .svg-container {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            margin: 0 auto;
+            width: 95vw;
+            height: 80vh;
+            overflow: auto;
+        }
+
+        .svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Генеалогическое дерево семьи</h1>
+
+        <div class="svg-container" id="svgContainer">
+            <!-- SVG будет загружен здесь -->
+        </div>
+    </div>
+
+    <script>
+        let currentZoom = 1;
+        let isDragging = false;
+        let translateX = 0;
+        let translateY = 0;
+        let startX, startY, initialTranslateX, initialTranslateY;
+
+        // Загрузка SVG
+        async function loadSVG() {
+            try {
+                const response = await fetch('family_tree_vector.svg');
+                if (response.ok) {
+                    const svgText = await response.text();
+                    document.getElementById('svgContainer').innerHTML = svgText;
+
+                    // Устанавливаем базовые атрибуты для SVG и добавляем обработчики
+                    const svg = document.querySelector('svg');
+                    if (svg) {
+                        svg.setAttribute('width', '100%');
+                        svg.setAttribute('height', 'auto');
+                        svg.style.display = 'block';
+                        svg.style.transformOrigin = 'center center';
+
+                        // Добавляем обработчики для масштабирования и перетаскивания
+                        addInteractionHandlers(svg);
+                    }
+                } else {
+                    document.getElementById('svgContainer').innerHTML =
+                        '<p style="color: red;">Файл family_tree_vector.svg не найден. Запустите main.py для создания дерева.</p>';
+                }
+            } catch (error) {
+                document.getElementById('svgContainer').innerHTML =
+                    '<p style="color: red;">Ошибка загрузки SVG: ' + error.message + '</p>';
+            }
+        }
+
+        // Обновление трансформации SVG
+        function updateTransform(svg) {
+            svg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+        }
+
+        // Добавление обработчиков взаимодействия
+        function addInteractionHandlers(svg) {
+            const container = document.getElementById('svgContainer');
+
+            // Масштабирование колесом мыши
+            container.addEventListener('wheel', function (e) {
+                e.preventDefault();
+
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                currentZoom *= delta;
+                currentZoom = Math.max(0.1, Math.min(5, currentZoom));
+
+                updateTransform(svg);
+            });
+
+            // Сброс масштаба и позиции двойным кликом
+            container.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                currentZoom = 1;
+                translateX = 0;
+                translateY = 0;
+                updateTransform(svg);
+            });
+
+            // Перетаскивание с помощью левой кнопки мыши
+            container.addEventListener('mousedown', function (e) {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialTranslateX = translateX;
+                initialTranslateY = translateY;
+                container.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            container.addEventListener('mouseleave', function () {
+                isDragging = false;
+                container.style.cursor = 'grab';
+            });
+
+            container.addEventListener('mouseup', function () {
+                isDragging = false;
+                container.style.cursor = 'grab';
+            });
+
+            container.addEventListener('mousemove', function (e) {
+                if (!isDragging) return;
+                e.preventDefault();
+
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+
+                translateX = initialTranslateX + deltaX;
+                translateY = initialTranslateY + deltaY;
+
+                updateTransform(svg);
+            });
+
+            // Устанавливаем курсор по умолчанию
+            container.style.cursor = 'grab';
+        }
+
+        // Загружаем SVG при загрузке страницы
+        window.addEventListener('load', loadSVG);
+    </script>
+</body>
+
+</html>
