@@ -6,29 +6,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Генеалогическое дерево</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            background-color: #f5f5f5;
-            font-family: Arial, sans-serif;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .container {
             text-align: center;
             max-width: 100%;
             overflow: auto;
+            padding: 20px;
         }
 
         .svg-container {
             background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 10px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px;
             margin: 0 auto;
             width: 95vw;
-            height: 80vh;
+            height: 75vh;
             overflow: auto;
+            position: relative;
         }
 
         .svg-container svg {
@@ -39,27 +57,227 @@
 
         h1 {
             color: #333;
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .control-button {
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-button:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .zoom-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #666;
+            max-width: 250px;
+            text-align: left;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .instructions:hover {
+            opacity: 1;
+        }
+
+        .instructions h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .instructions ul {
+            margin: 0;
+            padding-left: 15px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #666;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
             margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            color: #e74c3c;
+            background: #fdf2f2;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px;
+            text-align: center;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
+    <div class="header">
         <h1>Генеалогическое дерево семьи</h1>
-
-        <div class="svg-container" id="svgContainer">
-            <!-- SVG будет загружен здесь -->
-        </div>
+        <p class="subtitle">Интерактивное семейное дерево с персональными страницами</p>
     </div>
 
+    <div class="container">
+        <div class="svg-container" id="svgContainer">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Загрузка генеалогического дерева...</p>
+            </div>
+
+            <div class="controls" style="display: none;" id="controls">
+                <button class="control-button" onclick="resetView()" title="Сбросить масштаб">
+                    🔄 Сброс
+                </button>
+                <button class="control-button" onclick="zoomIn()" title="Увеличить">
+                    🔍 +
+                </button>
+                <button class="control-button" onclick="zoomOut()" title="Уменьшить">
+                    🔍 -
+                </button>
+            </div>
+
+            <div class="zoom-info" style="display: none;" id="zoomInfo">
+                Масштаб: <span id="zoomValue">100%</span>
+            </div>
+
+            <div class="instructions">
+                <h4>💡 Как пользоваться:</h4>
+                <ul>
+                    <li>🖱️ Колесо мыши - масштаб</li>
+                    <li>🖱️ Перетаскивание - навигация</li>
+                    <li>👆 Двойной клик - сброс</li>
+                    <li>👤 Клик по персоне - личная страница</li>
+                </ul>
+            </div>
+        </div>
+    </div>
     <script>
         let currentZoom = 1;
         let isDragging = false;
         let translateX = 0;
         let translateY = 0;
-        let startX, startY, initialTranslateX, initialTranslateY;        // Загрузка SVG
+        let startX, startY, initialTranslateX, initialTranslateY;
+
+        // Обновление информации о масштабе
+        function updateZoomInfo() {
+            const zoomPercent = Math.round(currentZoom * 100);
+            document.getElementById('zoomValue').textContent = `${zoomPercent}%`;
+        }
+
+        // Функции управления масштабом
+        function zoomIn() {
+            currentZoom *= 1.2;
+            currentZoom = Math.min(5, currentZoom);
+            const svg = document.querySelector('svg');
+            if (svg) {
+                updateTransform(svg);
+                updateZoomInfo();
+            }
+        }
+
+        function zoomOut() {
+            currentZoom *= 0.8;
+            currentZoom = Math.max(0.1, currentZoom);
+            const svg = document.querySelector('svg');
+            if (svg) {
+                updateTransform(svg);
+                updateZoomInfo();
+            }
+        }
+
+        function resetView() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            const svg = document.querySelector('svg');
+            if (svg) {
+                updateTransform(svg);
+                updateZoomInfo();
+            }
+        }
+
+        // Загрузка SVG с улучшенной обработкой ошибок
         async function loadSVG() {
+            const container = document.getElementById('svgContainer');
+
             try {
                 // Добавляем случайный параметр для отключения кэширования
                 const timestamp = new Date().getTime();
@@ -71,9 +289,40 @@
                         'Expires': '0'
                     }
                 });
+
                 if (response.ok) {
                     const svgText = await response.text();
-                    document.getElementById('svgContainer').innerHTML = svgText;
+                    container.innerHTML = svgText;
+
+                    // Добавляем элементы управления и информации
+                    const controlsHtml = `
+                        <div class="controls" id="controls">
+                            <button class="control-button" onclick="resetView()" title="Сбросить масштаб">
+                                🔄 Сброс
+                            </button>
+                            <button class="control-button" onclick="zoomIn()" title="Увеличить">
+                                🔍 +
+                            </button>
+                            <button class="control-button" onclick="zoomOut()" title="Уменьшить">
+                                🔍 -
+                            </button>
+                        </div>
+
+                        <div class="zoom-info" id="zoomInfo">
+                            Масштаб: <span id="zoomValue">100%</span>
+                        </div>
+
+                        <div class="instructions">
+                            <h4>💡 Как пользоваться:</h4>
+                            <ul>
+                                <li>🖱️ Колесо мыши - масштаб</li>
+                                <li>🖱️ Перетаскивание - навигация</li>
+                                <li>👆 Двойной клик - сброс</li>
+                                <li>👤 Клик по персоне - личная страница</li>
+                            </ul>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', controlsHtml);
 
                     // Устанавливаем базовые атрибуты для SVG и добавляем обработчики
                     const svg = document.querySelector('svg');
@@ -85,15 +334,150 @@
 
                         // Добавляем обработчики для масштабирования и перетаскивания
                         addInteractionHandlers(svg);
+
+                        // Добавляем интерактивность к узлам персон
+                        addPersonClickHandlers(svg);
+
+                        // Показываем элементы управления
+                        document.getElementById('controls').style.display = 'flex';
+                        document.getElementById('zoomInfo').style.display = 'block';
+
+                        updateZoomInfo();
+
+                        // Показываем уведомление об успешной загрузке
+                        showNotification('Генеалогическое дерево загружено! Кликните по любой персоне для просмотра личной страницы.', 'success');
                     }
                 } else {
-                    document.getElementById('svgContainer').innerHTML =
-                        '<p style="color: red;">Файл family_tree_vector.svg не найден. Запустите main.py для создания дерева.</p>';
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
             } catch (error) {
-                document.getElementById('svgContainer').innerHTML =
-                    '<p style="color: red;">Ошибка загрузки SVG: ' + error.message + '</p>';
+                console.error('Ошибка загрузки SVG:', error);
+                container.innerHTML = `
+                    <div class="error-message">
+                        <h3>❌ Ошибка загрузки дерева</h3>
+                        <p><strong>Файл family_tree_vector.svg не найден или поврежден.</strong></p>
+                        <p>Возможные решения:</p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>Запустите <code>python3 main.py</code> для создания дерева</li>
+                            <li>Убедитесь, что файл source.txt содержит данные</li>
+                            <li>Проверьте, что установлен Graphviz</li>
+                        </ul>
+                        <button class="control-button" onclick="loadSVG()" style="margin-top: 15px;">
+                            🔄 Попробовать снова
+                        </button>
+                    </div>
+                `;
             }
+        }
+
+        // Добавление обработчиков кликов на персон
+        function addPersonClickHandlers(svg) {
+            // Находим все узлы с персонами (исключая узлы браков)
+            const personNodes = svg.querySelectorAll('g.node:not([id*="marriage"])');
+
+            personNodes.forEach(node => {
+                const nodeId = node.getAttribute('id');
+                if (nodeId && !nodeId.includes('marriage')) {
+                    // Добавляем стили для интерактивности
+                    node.style.cursor = 'pointer';
+                    node.style.transition = 'all 0.3s ease';
+
+                    // Добавляем hover эффект
+                    node.addEventListener('mouseenter', function () {
+                        this.style.filter = 'drop-shadow(0 0 10px rgba(102, 126, 234, 0.6))';
+                        this.style.strokeWidth = '3';
+                        this.style.fontWeight = 'bold';
+                    });
+
+                    node.addEventListener('mouseleave', function () {
+                        this.style.filter = 'none';
+                        this.style.strokeWidth = '';
+                        this.style.fontWeight = '';
+                    });
+
+                    // Добавляем обработчик клика
+                    node.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Извлекаем ID персоны из ID узла
+                        const personId = nodeId;
+                        openPersonPage(personId);
+                    });
+
+                    // Добавляем тултип с подсказкой
+                    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                    title.textContent = 'Нажмите для перехода на страницу персоны';
+                    node.appendChild(title);
+                }
+            });
+        }
+
+        // Открытие страницы персоны
+        function openPersonPage(personId) {
+            // Показываем индикатор загрузки
+            showNotification('Открываем страницу персоны...', 'info');
+
+            // Открываем страницу персоны в той же вкладке
+            window.location.href = `person.html?id=${personId}`;
+        }
+
+        // Показ уведомлений с улучшенным дизайном
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+
+            // Определяем цвет и иконку в зависимости от типа
+            const styles = {
+                success: { bg: '#4CAF50', icon: '✅' },
+                error: { bg: '#f44336', icon: '❌' },
+                warning: { bg: '#ff9800', icon: '⚠️' },
+                info: { bg: '#667eea', icon: 'ℹ️' }
+            };
+
+            const style = styles[type] || styles.info;
+
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${style.bg};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 12px;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                z-index: 1000;
+                font-weight: 500;
+                font-size: 14px;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                max-width: 350px;
+                word-wrap: break-word;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+
+            notification.innerHTML = `
+                <span style="font-size: 16px;">${style.icon}</span>
+                <span>${message}</span>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Анимация появления
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            // Удаление через 4 секунды
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
         }
 
         // Обновление трансформации SVG
@@ -114,15 +498,14 @@
                 currentZoom = Math.max(0.1, Math.min(5, currentZoom));
 
                 updateTransform(svg);
+                updateZoomInfo();
             });
 
             // Сброс масштаба и позиции двойным кликом
             container.addEventListener('dblclick', function (e) {
                 e.preventDefault();
-                currentZoom = 1;
-                translateX = 0;
-                translateY = 0;
-                updateTransform(svg);
+                resetView();
+                showNotification('Масштаб и позиция сброшены', 'info');
             });
 
             // Перетаскивание с помощью левой кнопки мыши
