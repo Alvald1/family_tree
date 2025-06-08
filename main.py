@@ -17,6 +17,10 @@ class FamilyTreeBuilder:
         self.marriages: List[Tuple[int, int, List[int]]] = []
         # (родитель, ребенок)
         self.single_parent_children: List[Tuple[int, int]] = []
+        # (родитель1, родитель2) - браки без детей
+        self.childless_marriages: List[Tuple[int, int]] = []
+        # (родитель1, родитель2) - браки с неизвестными детьми
+        self.unknown_children_marriages: List[Tuple[int, int]] = []
 
     def parse_source_file(self, filename: str):
         """Парсинг исходного файла с данными о людях и связях"""
@@ -27,40 +31,58 @@ class FamilyTreeBuilder:
         self.people.clear()
         self.marriages.clear()
         self.single_parent_children.clear()
+        self.childless_marriages.clear()
+        self.unknown_children_marriages.clear()
 
         for line in lines:
             line = line.strip()
             if not line or line.startswith('//'):
                 continue
 
-            # Сначала парсим связи (поддерживаем знак вопроса для неизвестных супругов)
-            # Формат: номер1 -- номер2 (дети) или номер1 -- ? (дети) или номер1
-            # -> номер2
+            # Сначала парсим связи (поддерживаем знак вопроса для неизвестных супругов и детей)
+            # Форматы:
+            # номер1 -- номер2 (дети) - брак с известными детьми
+            # номер1 -- номер2 (?) - брак с неизвестными детьми
+            # номер1 -- номер2 - брак без детей
+            # номер1 -- ? (дети) - брак с неизвестным супругом
+            # номер1 -- ? (?) - брак с неизвестным супругом и неизвестными детьми
+            # номер1 -- ? - брак с неизвестным супругом без детей
             relation_match = re.match(
-                r'^(\d+)\s*(?:--|->)\s*(\?|\d+)(?:\s*\(([^)]+)\))?$', line)
+                r'^(\d+)\s*(?:--|->)\s*(\?|\d+)(?:\s*\(([^)]*)\))?$', line)
             if relation_match:
                 parent1 = int(relation_match.group(1))
                 parent2_str = relation_match.group(2)
-                children_str = relation_match.group(3)
+                children_str = relation_match.group(
+                    3) if relation_match.group(3) is not None else None
 
                 # Обрабатываем неизвестного супруга
                 if parent2_str == '?':
                     # Создаем временного неизвестного супруга
                     unknown_id = self._get_next_unknown_id()
-                    unknown_name = f"?"
+                    unknown_name = "?"
                     self.people[unknown_id] = unknown_name
                     parent2 = unknown_id
                 else:
                     parent2 = int(parent2_str)
 
-                if children_str:
-                    # Есть дети - это брак
-                    children = [int(x.strip())
-                                for x in children_str.split(',') if x.strip()]
-                    self.marriages.append((parent1, parent2, children))
+                # Обрабатываем детей
+                if children_str is None:
+                    # Нет скобок - брак без детей
+                    self.childless_marriages.append((parent1, parent2))
+                elif children_str.strip() == '?':
+                    # Скобки с вопросом - неизвестные дети
+                    self.unknown_children_marriages.append((parent1, parent2))
+                elif children_str.strip() == '':
+                    # Пустые скобки - брак без детей
+                    self.childless_marriages.append((parent1, parent2))
                 else:
-                    # Нет детей - это брак без детей
-                    self.single_parent_children.append((parent1, parent2))
+                    # Есть конкретные дети - обычный брак
+                    children = []
+                    for child_str in children_str.split(','):
+                        child_str = child_str.strip()
+                        if child_str and child_str.isdigit():
+                            children.append(int(child_str))
+                    self.marriages.append((parent1, parent2, children))
                 continue
 
             # Потом парсим людей (формат: номер - имя [(даты)])
@@ -124,6 +146,62 @@ class FamilyTreeBuilder:
             # Связываем брак с детьми
             for child in children:
                 dot.edge(marriage_node, str(child), color='blue')
+
+            marriage_counter += 1
+
+        # Обрабатываем браки без детей
+        for parent1, parent2 in self.childless_marriages:
+            # Создаем узел брака
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#E6E6FA',  # Лавандовый цвет для браков без детей
+                width='0.4',
+                height='0.4',
+                fontsize='14')
+
+            # Связываем родителей с браком
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+
+            marriage_counter += 1
+
+        # Обрабатываем браки с неизвестными детьми
+        for parent1, parent2 in self.unknown_children_marriages:
+            # Создаем узел брака
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#FFFACD',  # Светло-желтый для браков с неизвестными детьми
+                width='0.5',
+                height='0.5',
+                fontsize='12')
+
+            # Связываем родителей с браком
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+
+            # Добавляем узел неизвестных детей
+            unknown_children_node = f"unknown_children_{marriage_counter}"
+            dot.node(
+                unknown_children_node,
+                "?",
+                shape='box',
+                style='filled,dashed',
+                fillcolor='#F0F0F0',
+                fontsize='10')
+
+            dot.edge(
+                marriage_node,
+                unknown_children_node,
+                color='gray',
+                style='dashed')
 
             marriage_counter += 1
 
@@ -192,10 +270,32 @@ class FamilyTreeBuilder:
         """Вывод статистики по дереву"""
         print(f"\nСтатистика генеалогического дерева:")
         print(f"Всего людей: {len(self.people)}")
-        print(f"Количество браков: {len(self.marriages)}")
+        print(f"Количество браков с детьми: {len(self.marriages)}")
+        print(f"Количество браков без детей: {len(self.childless_marriages)}")
+        print(
+            f"Количество браков с неизвестными детьми: {len(self.unknown_children_marriages)}")
+        print(f"Общее количество браков: {len(self.marriages) +
+                                          len(self.childless_marriages) +
+                                          len(self.unknown_children_marriages)}")
         print(
             f"Количество детей от браков: {sum(len(children) for _, _, children in self.marriages)}")
         print(f"Одиночные связи: {len(self.single_parent_children)}")
+
+        # Дополнительная статистика
+        total_married_people = set()
+        for parent1, parent2, _ in self.marriages:
+            total_married_people.add(parent1)
+            total_married_people.add(parent2)
+        for parent1, parent2 in self.childless_marriages:
+            total_married_people.add(parent1)
+            total_married_people.add(parent2)
+        for parent1, parent2 in self.unknown_children_marriages:
+            total_married_people.add(parent1)
+            total_married_people.add(parent2)
+
+        print(f"Количество людей в браке: {len(total_married_people)}")
+        print(
+            f"Количество одиноких людей: {len(self.people) - len(total_married_people)}")
 
     def _analyze_generations(self) -> Dict[str, List[int]]:
         """Анализ поколений по годам рождения"""
@@ -306,7 +406,7 @@ class FamilyTreeBuilder:
         """Валидация данных и поиск проблем"""
         issues = []
 
-        # Проверяем, что все родители в браках существуют
+        # Проверяем, что все родители в браках с детьми существуют
         for parent1, parent2, children in self.marriages:
             if parent1 not in self.people:
                 issues.append(f"Родитель {parent1} не найден в списке людей")
@@ -317,6 +417,24 @@ class FamilyTreeBuilder:
             for child in children:
                 if child not in self.people:
                     issues.append(f"Ребенок {child} не найден в списке людей")
+
+        # Проверяем браки без детей
+        for parent1, parent2 in self.childless_marriages:
+            if parent1 not in self.people:
+                issues.append(
+                    f"Супруг {parent1} (брак без детей) не найден в списке людей")
+            if parent2 not in self.people:
+                issues.append(
+                    f"Супруг {parent2} (брак без детей) не найден в списке людей")
+
+        # Проверяем браки с неизвестными детьми
+        for parent1, parent2 in self.unknown_children_marriages:
+            if parent1 not in self.people:
+                issues.append(
+                    f"Супруг {parent1} (брак с неизвестными детьми) не найден в списке людей")
+            if parent2 not in self.people:
+                issues.append(
+                    f"Супруг {parent2} (брак с неизвестными детьми) не найден в списке людей")
 
         # Проверяем одиночные связи
         for parent, child in self.single_parent_children:
@@ -614,9 +732,16 @@ def main():
     except FileNotFoundError:
         print("❌ Ошибка: файл source.txt не найден!")
         print("Создайте файл source.txt в формате:")
+        print("\nЛюди:")
         print("1 - Иванов Иван Иванович (01.01.1980-...)")
         print("2 - Иванова Мария Петровна (02.02.1985-...)")
-        print("1 -- 2 (3,4)")
+        print("\nСвязи:")
+        print("1 -- 2 (3,4)           # брак с детьми 3 и 4")
+        print("1 -- 2                 # брак без детей")
+        print("1 -- 2 (?)             # брак с неизвестными детьми")
+        print("1 -- ?                 # брак с неизвестным супругом")
+        print("1 -- ? (5,6)           # брак с неизвестным супругом и детьми")
+        print("1 -- ? (?)             # брак с неизвестным супругом и неизвестными детьми")
     except Exception as e:
         print(f"❌ Произошла ошибка: {e}")
 
