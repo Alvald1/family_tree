@@ -53,6 +53,12 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_PUT(self):
+        if self.path.startswith('/api/'):
+            self.handle_api_put()
+        else:
+            self.send_error(404)
+
     def do_DELETE(self):
         if self.path.startswith('/api/'):
             self.handle_api_delete()
@@ -119,6 +125,27 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Ошибка API POST: {e}")
+            self.send_error(500)
+
+    def handle_api_put(self):
+        """Обработка PUT запросов к API"""
+        try:
+            path_parts = self.path.split('/')
+
+            if len(path_parts) >= 5 and path_parts[2] == 'person':
+                person_id = path_parts[3]
+                resource = path_parts[4]
+
+                if resource == 'messages':
+                    # PUT /api/person/{id}/messages - обновление сообщений
+                    self.save_person_messages(person_id)
+                else:
+                    self.send_error(404)
+            else:
+                self.send_error(404)
+
+        except Exception as e:
+            print(f"Ошибка API PUT: {e}")
             self.send_error(500)
 
     def handle_api_delete(self):
@@ -483,7 +510,7 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header(
             'Access-Control-Allow-Methods',
-            'GET, POST, DELETE, OPTIONS')
+            'GET, POST, PUT, DELETE, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.send_header(
             'Cache-Control',

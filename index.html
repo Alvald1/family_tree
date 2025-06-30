@@ -73,80 +73,6 @@
             opacity: 0.8;
         }
 
-        .controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 10;
-        }
-
-        .control-button {
-            background: rgba(102, 126, 234, 0.9);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .control-button:hover {
-            background: rgba(102, 126, 234, 1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .zoom-info {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 10;
-        }
-
-        .instructions {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 12px;
-            color: #666;
-            max-width: 250px;
-            text-align: left;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
-        }
-
-        .instructions:hover {
-            opacity: 1;
-        }
-
-        .instructions h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .instructions ul {
-            margin: 0;
-            padding-left: 15px;
-        }
-
-        .instructions li {
-            margin-bottom: 5px;
-        }
 
         .loading {
             display: flex;
@@ -202,31 +128,7 @@
                 <p>Загрузка генеалогического дерева...</p>
             </div>
 
-            <div class="controls" style="display: none;" id="controls">
-                <button class="control-button" onclick="resetView()" title="Сбросить масштаб">
-                    🔄 Сброс
-                </button>
-                <button class="control-button" onclick="zoomIn()" title="Увеличить">
-                    🔍 +
-                </button>
-                <button class="control-button" onclick="zoomOut()" title="Уменьшить">
-                    🔍 -
-                </button>
-            </div>
 
-            <div class="zoom-info" style="display: none;" id="zoomInfo">
-                Масштаб: <span id="zoomValue">100%</span>
-            </div>
-
-            <div class="instructions">
-                <h4>💡 Как пользоваться:</h4>
-                <ul>
-                    <li>🖱️ Колесо мыши - масштаб</li>
-                    <li>🖱️ Перетаскивание - навигация</li>
-                    <li>👆 Двойной клик - сброс</li>
-                    <li>👤 Клик по персоне - личная страница</li>
-                </ul>
-            </div>
         </div>
     </div>
     <script>
@@ -235,44 +137,6 @@
         let translateX = 0;
         let translateY = 0;
         let startX, startY, initialTranslateX, initialTranslateY;
-
-        // Обновление информации о масштабе
-        function updateZoomInfo() {
-            const zoomPercent = Math.round(currentZoom * 100);
-            document.getElementById('zoomValue').textContent = `${zoomPercent}%`;
-        }
-
-        // Функции управления масштабом
-        function zoomIn() {
-            currentZoom *= 1.2;
-            currentZoom = Math.min(5, currentZoom);
-            const svg = document.querySelector('svg');
-            if (svg) {
-                updateTransform(svg);
-                updateZoomInfo();
-            }
-        }
-
-        function zoomOut() {
-            currentZoom *= 0.8;
-            currentZoom = Math.max(0.1, currentZoom);
-            const svg = document.querySelector('svg');
-            if (svg) {
-                updateTransform(svg);
-                updateZoomInfo();
-            }
-        }
-
-        function resetView() {
-            currentZoom = 1;
-            translateX = 0;
-            translateY = 0;
-            const svg = document.querySelector('svg');
-            if (svg) {
-                updateTransform(svg);
-                updateZoomInfo();
-            }
-        }
 
         // Загрузка SVG с улучшенной обработкой ошибок
         async function loadSVG() {
@@ -294,36 +158,6 @@
                     const svgText = await response.text();
                     container.innerHTML = svgText;
 
-                    // Добавляем элементы управления и информации
-                    const controlsHtml = `
-                        <div class="controls" id="controls">
-                            <button class="control-button" onclick="resetView()" title="Сбросить масштаб">
-                                🔄 Сброс
-                            </button>
-                            <button class="control-button" onclick="zoomIn()" title="Увеличить">
-                                🔍 +
-                            </button>
-                            <button class="control-button" onclick="zoomOut()" title="Уменьшить">
-                                🔍 -
-                            </button>
-                        </div>
-
-                        <div class="zoom-info" id="zoomInfo">
-                            Масштаб: <span id="zoomValue">100%</span>
-                        </div>
-
-                        <div class="instructions">
-                            <h4>💡 Как пользоваться:</h4>
-                            <ul>
-                                <li>🖱️ Колесо мыши - масштаб</li>
-                                <li>🖱️ Перетаскивание - навигация</li>
-                                <li>👆 Двойной клик - сброс</li>
-                                <li>👤 Клик по персоне - личная страница</li>
-                            </ul>
-                        </div>
-                    `;
-                    container.insertAdjacentHTML('beforeend', controlsHtml);
-
                     // Устанавливаем базовые атрибуты для SVG и добавляем обработчики
                     const svg = document.querySelector('svg');
                     if (svg) {
@@ -337,12 +171,6 @@
 
                         // Добавляем интерактивность к узлам персон
                         addPersonClickHandlers(svg);
-
-                        // Показываем элементы управления
-                        document.getElementById('controls').style.display = 'flex';
-                        document.getElementById('zoomInfo').style.display = 'block';
-
-                        updateZoomInfo();
 
                         // Показываем уведомление об успешной загрузке
                         showNotification('Генеалогическое дерево загружено! Кликните по любой персоне для просмотра личной страницы.', 'success');
@@ -362,8 +190,8 @@
                             <li>Убедитесь, что файл source.txt содержит данные</li>
                             <li>Проверьте, что установлен Graphviz</li>
                         </ul>
-                        <button class="control-button" onclick="loadSVG()" style="margin-top: 15px;">
-                            🔄 Попробовать снова
+                        <button onclick="location.reload()" style="margin-top: 15px; background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                            🔄 Перезагрузить страницу
                         </button>
                     </div>
                 `;
@@ -498,14 +326,6 @@
                 currentZoom = Math.max(0.1, Math.min(5, currentZoom));
 
                 updateTransform(svg);
-                updateZoomInfo();
-            });
-
-            // Сброс масштаба и позиции двойным кликом
-            container.addEventListener('dblclick', function (e) {
-                e.preventDefault();
-                resetView();
-                showNotification('Масштаб и позиция сброшены', 'info');
             });
 
             // Перетаскивание с помощью левой кнопки мыши

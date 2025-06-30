@@ -166,6 +166,14 @@
             transform: scale(1.1);
         }
 
+        .action-btn.edit {
+            background: #4caf50;
+        }
+
+        .action-btn.edit:hover {
+            background: #45a049;
+        }
+
         .action-btn.delete {
             background: #f44336;
         }
@@ -178,6 +186,67 @@
             line-height: 1.6;
             color: #333;
             word-wrap: break-word;
+        }
+
+        .message-content.editing {
+            display: none;
+        }
+
+        .message-edit-form {
+            display: none;
+        }
+
+        .message-edit-form.active {
+            display: block;
+        }
+
+        .message-edit-textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .message-edit-textarea:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .edit-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .edit-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .cancel-btn {
+            background: #f44336;
+        }
+
+        .cancel-btn:hover {
+            background: #d32f2f;
         }
 
         .message-image {
@@ -717,7 +786,7 @@
 
                 let messageContent;
                 if (message.type === 'text') {
-                    messageContent = `<div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>`;
+                    messageContent = `<div class="message-content" id="messageContent${index}">${message.content.replace(/\n/g, '<br>')}</div>`;
                 } else if (message.type === 'image') {
                     // Поддержка как старых base64, так и новых URL
                     const imageUrl = typeof message.content === 'string' ? message.content : message.content.url;
@@ -727,16 +796,29 @@
                     messageContent = createAlbumContent(message.content, index);
                 }
 
+                const messageDate = new Date(message.date).toLocaleString('ru-RU');
+                const editedText = message.editedDate ? ` (изм. ${new Date(message.editedDate).toLocaleString('ru-RU')})` : '';
+
                 messageDiv.innerHTML = `
                     <div class="message-header">
-                        <div class="message-date">${new Date(message.date).toLocaleString('ru-RU')}</div>
+                        <div class="message-date">${messageDate}${editedText}</div>
                         <div class="message-actions">
+                            ${message.type === 'text' ? `<button class="action-btn edit" onclick="editMessage(${index})" title="Редактировать">✏</button>` : ''}
                             <button class="action-btn" onclick="moveMessageUp(${index})" title="Переместить вверх">↑</button>
                             <button class="action-btn" onclick="moveMessageDown(${index})" title="Переместить вниз">↓</button>
                             <button class="action-btn delete" onclick="deleteMessage(${index})" title="Удалить">×</button>
                         </div>
                     </div>
                     ${messageContent}
+                    ${message.type === 'text' ? `
+                        <div class="message-edit-form" id="editForm${index}">
+                            <textarea class="message-edit-textarea" id="editTextarea${index}">${message.content}</textarea>
+                            <div class="edit-buttons">
+                                <button class="edit-btn" onclick="saveEditedMessage(${index})">Сохранить</button>
+                                <button class="edit-btn cancel-btn" onclick="cancelEdit(${index})">Отмена</button>
+                            </div>
+                        </div>
+                    ` : ''}
                 `;
 
                 // Добавляем обработчики drag & drop
@@ -1210,6 +1292,54 @@
             showNotification('Сообщение удалено');
         }
 
+        // Редактирование сообщения
+        function editMessage(index) {
+            const messageContent = document.getElementById(`messageContent${index}`);
+            const editForm = document.getElementById(`editForm${index}`);
+            const textarea = document.getElementById(`editTextarea${index}`);
+
+            // Скрываем обычное содержимое и показываем форму редактирования
+            messageContent.style.display = 'none';
+            editForm.classList.add('active');
+
+            // Устанавливаем текущий текст в textarea
+            textarea.value = messages[index].content;
+            textarea.focus();
+
+            // Автоматически изменяем размер textarea
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        // Сохранение отредактированного сообщения
+        function saveEditedMessage(index) {
+            const textarea = document.getElementById(`editTextarea${index}`);
+            const newContent = textarea.value.trim();
+
+            if (!newContent) {
+                showNotification('Сообщение не может быть пустым', 'error');
+                return;
+            }
+
+            // Обновляем содержимое сообщения
+            messages[index].content = newContent;
+            messages[index].editedDate = new Date().toISOString();
+
+            saveMessages();
+            displayMessages();
+            showNotification('Сообщение отредактировано');
+        }
+
+        // Отмена редактирования
+        function cancelEdit(index) {
+            const messageContent = document.getElementById(`messageContent${index}`);
+            const editForm = document.getElementById(`editForm${index}`);
+
+            // Показываем обычное содержимое и скрываем форму редактирования
+            messageContent.style.display = 'block';
+            editForm.classList.remove('active');
+        }
+
         // Перемещение сообщения вверх
         function moveMessageUp(index) {
             if (index === 0) return;
@@ -1360,6 +1490,22 @@
 
                     await addPhotoMessages(validFiles);
                     e.target.value = '';
+                }
+            });
+
+            // Обработчик клавиш для всех textarea редактирования
+            document.addEventListener('keydown', (e) => {
+                if (e.target.classList.contains('message-edit-textarea')) {
+                    const textarea = e.target;
+                    const index = textarea.id.replace('editTextarea', '');
+
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        saveEditedMessage(parseInt(index));
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEdit(parseInt(index));
+                    }
                 }
             });
         }
