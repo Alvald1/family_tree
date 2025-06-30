@@ -138,6 +138,39 @@
         let translateY = 0;
         let startX, startY, initialTranslateX, initialTranslateY;
 
+        // Сохранение состояния просмотра
+        function saveViewState() {
+            const viewState = {
+                zoom: currentZoom,
+                translateX: translateX,
+                translateY: translateY,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('treeViewState', JSON.stringify(viewState));
+        }
+
+        // Восстановление состояния просмотра
+        function restoreViewState() {
+            try {
+                const savedState = localStorage.getItem('treeViewState');
+                if (savedState) {
+                    const viewState = JSON.parse(savedState);
+
+                    // Проверяем, что состояние не слишком старое (максимум 1 час)
+                    const oneHour = 60 * 60 * 1000;
+                    if (Date.now() - viewState.timestamp < oneHour) {
+                        currentZoom = viewState.zoom || 1;
+                        translateX = viewState.translateX || 0;
+                        translateY = viewState.translateY || 0;
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.log('Ошибка восстановления состояния:', error);
+            }
+            return false;
+        }
+
         // Загрузка SVG с улучшенной обработкой ошибок
         async function loadSVG() {
             const container = document.getElementById('svgContainer');
@@ -171,6 +204,13 @@
 
                         // Добавляем интерактивность к узлам персон
                         addPersonClickHandlers(svg);
+
+                        // Восстанавливаем сохраненное состояние просмотра
+                        const stateRestored = restoreViewState();
+                        if (stateRestored) {
+                            updateTransform(svg);
+                            showNotification('Состояние просмотра восстановлено', 'info');
+                        }
 
                         // Показываем уведомление об успешной загрузке
                         showNotification('Генеалогическое дерево загружено! Двойной клик по персоне для просмотра личной страницы.', 'success');
@@ -243,6 +283,9 @@
 
         // Открытие страницы персоны
         function openPersonPage(personId) {
+            // Сохраняем текущее состояние просмотра
+            saveViewState();
+
             // Показываем индикатор загрузки
             showNotification('Открываем страницу персоны...', 'info');
 
@@ -311,6 +354,9 @@
         // Обновление трансформации SVG
         function updateTransform(svg) {
             svg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+            // Автосохранение состояния при изменениях (с небольшой задержкой)
+            clearTimeout(updateTransform.saveTimeout);
+            updateTransform.saveTimeout = setTimeout(saveViewState, 500);
         }
 
         // Добавление обработчиков взаимодействия
