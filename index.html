@@ -45,7 +45,7 @@
             margin: 0 auto;
             width: 95vw;
             height: 75vh;
-            overflow: auto;
+            overflow: hidden;
             position: relative;
         }
 
@@ -368,8 +368,24 @@
                 e.preventDefault();
 
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                currentZoom *= delta;
-                currentZoom = Math.max(0.1, Math.min(5, currentZoom));
+                const newZoom = Math.max(0.1, Math.min(5, currentZoom * delta));
+
+                // Получаем позицию курсора относительно контейнера
+                const rect = container.getBoundingClientRect();
+                const containerPadding = 20; // padding контейнера
+                const mouseX = e.clientX - rect.left - containerPadding;
+                const mouseY = e.clientY - rect.top - containerPadding;
+
+                // Вычисляем точку в координатах SVG до масштабирования (относительно курсора)
+                const pointBeforeX = (mouseX - translateX) / currentZoom;
+                const pointBeforeY = (mouseY - translateY) / currentZoom;
+
+                // Обновляем масштаб
+                currentZoom = newZoom;
+
+                // Вычисляем новую позицию, чтобы точка под курсором осталась на месте
+                translateX = mouseX - pointBeforeX * currentZoom;
+                translateY = mouseY - pointBeforeY * currentZoom;
 
                 updateTransform(svg);
             });
