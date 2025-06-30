@@ -173,7 +173,7 @@
                         addPersonClickHandlers(svg);
 
                         // Показываем уведомление об успешной загрузке
-                        showNotification('Генеалогическое дерево загружено! Кликните по любой персоне для просмотра личной страницы.', 'success');
+                        showNotification('Генеалогическое дерево загружено! Двойной клик по персоне для просмотра личной страницы.', 'success');
                     }
                 } else {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -223,8 +223,8 @@
                         this.style.fontWeight = '';
                     });
 
-                    // Добавляем обработчик клика
-                    node.addEventListener('click', function (e) {
+                    // Добавляем обработчик двойного клика
+                    node.addEventListener('dblclick', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
 
@@ -235,7 +235,7 @@
 
                     // Добавляем тултип с подсказкой
                     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                    title.textContent = 'Нажмите для перехода на страницу персоны';
+                    title.textContent = 'Двойной клик для перехода на страницу персоны';
                     node.appendChild(title);
                 }
             });
