@@ -164,7 +164,6 @@ class PersonPage {
         // Обработка ошибок
         window.addEventListener('error', (event) => {
             console.error('Page error:', event.error);
-            notifications.error('Произошла ошибка на странице');
         });
 
         // Обработка смены табов
@@ -406,10 +405,9 @@ class PersonPage {
 
         try {
             await this.loadPersonData();
-            notifications.success('Данные обновлены');
+            console.log('Данные обновлены');
         } catch (error) {
             console.error('Error refreshing person data:', error);
-            notifications.error('Ошибка обновления данных');
         }
     }
 

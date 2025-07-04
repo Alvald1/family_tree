@@ -36,7 +36,6 @@ class TreeViewer {
             if (this.svg) {
                 this.setupSVG();
                 this.restoreViewState();
-                notifications.success(AppConfig.messages.loadSuccess);
             } else {
                 throw new Error('SVG element not found in loaded content');
             }
@@ -210,7 +209,6 @@ class TreeViewer {
      */
     openPersonPage(personId) {
         this.saveViewState();
-        notifications.info(AppConfig.messages.personPageOpening);
         window.location.href = `person.html?id=${personId}`;
     }
 
@@ -243,7 +241,6 @@ class TreeViewer {
             this.translateX = savedState.translateX || 0;
             this.translateY = savedState.translateY || 0;
             this.updateTransform();
-            notifications.info(AppConfig.messages.stateRestored);
             return true;
         }
 

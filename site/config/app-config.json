@@ -22,11 +22,6 @@
         "saveStateEnabled": true,
         "stateExpirationTime": 3600000
     },
-    "notifications": {
-        "defaultDuration": 4000,
-        "maxNotifications": 5,
-        "position": "top-right"
-    },
     "autoSave": {
         "enabled": true,
         "debounceTime": 500,

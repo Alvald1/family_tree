@@ -36,10 +36,6 @@ backup_interval = 24 * 3600  # 24 часа
 backup_directory = "backups"
 max_backups = 30
 
-# Настройки уведомлений
-notifications_enabled = True
-notification_duration = 4000  # мс
-
 # Настройки логирования
 log_level = "INFO"
 log_file = "server.log"

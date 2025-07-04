@@ -26,13 +26,6 @@ const AppConfig = {
         stateExpirationTime: 60 * 60 * 1000 // 1 час
     },
 
-    // Настройки уведомлений
-    notifications: {
-        defaultDuration: 4000,
-        maxNotifications: 5,
-        position: 'top-right'
-    },
-
     // Настройки автосохранения
     autoSave: {
         enabled: true,

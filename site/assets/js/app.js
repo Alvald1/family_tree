@@ -33,7 +33,6 @@ class FamilyTreeApp {
 
         } catch (error) {
             console.error('Failed to initialize Family Tree App:', error);
-            notifications.error(`Ошибка инициализации приложения: ${error.message}`);
         }
     }
 
@@ -70,12 +69,10 @@ class FamilyTreeApp {
         // Обработка ошибок
         window.addEventListener('error', (event) => {
             console.error('Global error:', event.error);
-            notifications.error('Произошла непредвиденная ошибка');
         });
 
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled promise rejection:', event.reason);
-            notifications.error('Ошибка загрузки данных');
         });
 
         // Обработка изменения размера окна
@@ -132,11 +129,10 @@ class FamilyTreeApp {
         if (!this.treeViewer) return;
 
         try {
-            notifications.info('Перезагрузка дерева...');
+            console.log('Перезагрузка дерева...');
             await this.treeViewer.loadSVG();
         } catch (error) {
             console.error('Reload failed:', error);
-            notifications.error('Ошибка перезагрузки дерева');
         }
     }
 
@@ -176,8 +172,7 @@ window.familyTree = {
     reload: () => familyTreeApp?.reload(),
     status: () => familyTreeApp?.getStatus(),
     zoom: (level) => familyTreeApp?.treeViewer?.setViewState({ zoom: level }),
-    reset: () => familyTreeApp?.treeViewer?.resetView(),
-    notifications: notifications
+    reset: () => familyTreeApp?.treeViewer?.resetView()
 };
 
 // Экспорт для использования в других модулях

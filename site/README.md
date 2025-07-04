@@ -18,13 +18,11 @@ site/
 │   ├── css/              # Стили
 │   │   ├── main.css          # Основные стили
 │   │   ├── tree-viewer.css   # Стили просмотрщика дерева
-│   │   ├── notifications.css # Стили уведомлений
 │   │   ├── person-page.css   # Стили страницы персоны
 │   │   └── photo-gallery.css # Стили фотогалереи
 │   ├── js/               # JavaScript модули
 │   │   ├── config.js         # Конфигурация приложения
 │   │   ├── utils.js          # Вспомогательные функции
-│   │   ├── notifications.js  # Система уведомлений
 │   │   ├── tree-viewer.js    # Просмотрщик дерева
 │   │   ├── tree-interactions.js # Интерактивность дерева
 │   │   ├── app.js           # Главный файл приложения
