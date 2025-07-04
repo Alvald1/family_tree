@@ -2,3 +2,4 @@
 *.png
 family_tree
 person_data
+__pycache__
