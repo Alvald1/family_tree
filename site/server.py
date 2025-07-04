@@ -218,28 +218,32 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
                 numeric_id = person_id[4:]  # убираем "node"
 
             source_file = os.path.join('..', 'source.txt')
-            
+
             if os.path.exists(source_file):
                 with open(source_file, 'r', encoding='utf-8') as f:
                     lines = f.readlines()
-                
+
                 for line in lines:
                     line = line.strip()
                     search_pattern = f"{numeric_id} -"
-                    
+
                     if line.startswith(search_pattern):
                         person_info = line[line.find('-') + 1:].strip()
 
-                        # Попытка извлечь даты из последних скобок (для дат рождения-смерти)
-                        dates_match = re.search(r'\(([^)]+)\)(?![^(]*\()', person_info)
+                        # Попытка извлечь даты из последних скобок (для дат
+                        # рождения-смерти)
+                        dates_match = re.search(
+                            r'\(([^)]+)\)(?![^(]*\()', person_info)
                         dates = dates_match.group(1) if dates_match else ''
-                        
-                        # Если в скобках не даты (нет дефиса или цифр), пробуем найти другие скобки
+
+                        # Если в скобках не даты (нет дефиса или цифр), пробуем
+                        # найти другие скобки
                         if dates and not re.search(r'[\d\-]', dates):
                             # Ищем последние скобки с датами
-                            all_dates = re.findall(r'\(([^)]*\d[^)]*)\)', person_info)
+                            all_dates = re.findall(
+                                r'\(([^)]*\d[^)]*)\)', person_info)
                             dates = all_dates[-1] if all_dates else ''
-                        
+
                         name = re.sub(r'\s*\([^)]+\)', '', person_info).strip()
 
                         response_data = {

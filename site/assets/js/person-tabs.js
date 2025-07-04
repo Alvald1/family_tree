@@ -113,7 +113,7 @@ class PersonTabs {
         // Проверяем, что сохраненный таб все еще доступен
         const validTabs = ['messages', 'photos'];
         const tabToActivate = validTabs.includes(savedTab) ? savedTab : 'messages';
-        
+
         if (this.tabs.has(tabToActivate)) {
             this.switchTab(tabToActivate);
         } else {

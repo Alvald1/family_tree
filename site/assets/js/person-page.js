@@ -61,7 +61,7 @@ class PersonPage {
 
             // Загружаем основную информацию
             this.personData = await personAPI.getPersonInfo(this.personId);
-            
+
             // Отладка: выводим полученные данные
             console.log('Person data loaded:', this.personData);
 
@@ -97,7 +97,7 @@ class PersonPage {
      */
     updatePageHeader() {
         console.log('Updating page header with data:', this.personData);
-        
+
         if (!this.personData) {
             console.log('No person data available');
             return;
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             personPage = new PersonPage();
             personPage.personId = getPersonIdFromUrl();
             personPage.tabs = new PersonTabs();
-            
+
             // Создаем глобальные объекты для управления сообщениями и фотографиями
             if (typeof PersonMessages !== 'undefined') {
                 window.personMessages = new PersonMessages();
@@ -452,14 +452,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof PersonPhotos !== 'undefined') {
                 window.personPhotos = new PersonPhotos();
             }
-            
+
             // Восстанавливаем активный таб
             personPage.tabs.restoreActiveTab();
             personPage.setupEventListeners();
             personPage.isInitialized = true;
             return;
         }
-        
+
         // Если ФИО не обновлено, запускаем полную инициализацию
         personPage = new PersonPage();
         await personPage.init();

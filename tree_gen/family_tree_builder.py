@@ -459,6 +459,130 @@ class FamilyTreeBuilder:
             print(f"DOT файл сохранен как {output_filename}.dot")
         return dot
 
+    def create_svg_only(self, output_filename: str = 'family_tree_vector'):
+        """Создание только SVG файла генеалогического дерева"""
+        dot = graphviz.Digraph(comment='Генеалогическое дерево')
+        dot.attr(rankdir='TB', bgcolor='white', size='20,30!')
+        dot.attr(dpi='300')
+        dot.attr(resolution='300')
+        dot.attr(
+            'node',
+            shape='box',
+            style='filled,rounded',
+            fontname='Arial',
+            fontsize='12')
+        dot.attr('edge', fontname='Arial', fontsize='10')
+        for person_id, info in self.people.items():
+            formatted_info = self._format_person_info(info)
+            birth_year = self._extract_birth_year(info)
+            color = self._get_generation_color(birth_year, person_id >= 1000)
+            dot.node(str(person_id), formatted_info, fillcolor=color)
+        marriage_counter = 1
+        for parent1, parent2, children in self.marriages:
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#FFB6C1',
+                width='0.5',
+                height='0.5',
+                fontsize='16')
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+            for child in children:
+                dot.edge(marriage_node, str(child), color='blue')
+            marriage_counter += 1
+        for parent1, parent2, known_children, unknown_count in self.mixed_children_marriages:
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#FFA07A',
+                width='0.5',
+                height='0.5',
+                fontsize='16')
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+            for child in known_children:
+                dot.edge(marriage_node, str(child), color='blue')
+            for i in range(unknown_count):
+                unknown_child_node = f"unknown_child_{marriage_counter}_{i}"
+                dot.node(
+                    unknown_child_node,
+                    "?",
+                    shape='box',
+                    style='filled,dashed',
+                    fillcolor='#F0F0F0',
+                    fontsize='10')
+                dot.edge(
+                    marriage_node,
+                    unknown_child_node,
+                    color='gray',
+                    style='dashed')
+            marriage_counter += 1
+        for parent1, parent2 in self.childless_marriages:
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#E6E6FA',
+                width='0.4',
+                height='0.4',
+                fontsize='14')
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+            marriage_counter += 1
+        for parent1, parent2 in self.unknown_children_marriages:
+            marriage_node = f"marriage_{marriage_counter}"
+            dot.node(
+                marriage_node,
+                "♥",
+                shape='circle',
+                style='filled',
+                fillcolor='#FFFACD',
+                width='0.5',
+                height='0.5',
+                fontsize='12')
+            dot.edge(str(parent1), marriage_node, dir='none', style='bold')
+            dot.edge(str(parent2), marriage_node, dir='none', style='bold')
+            unknown_children_node = f"unknown_children_{marriage_counter}"
+            dot.node(
+                unknown_children_node,
+                "?",
+                shape='box',
+                style='filled,dashed',
+                fillcolor='#F0F0F0',
+                fontsize='10')
+            dot.edge(
+                marriage_node,
+                unknown_children_node,
+                color='gray',
+                style='dashed')
+            marriage_counter += 1
+        processed_pairs: Set[Tuple[int, int]] = set()
+        for parent, child in self.single_parent_children:
+            if (parent, child) not in processed_pairs and (
+                    child, parent) not in processed_pairs:
+                dot.edge(str(parent), str(child), color='gray', style='dashed')
+                processed_pairs.add((parent, child))
+        try:
+            svg_filename = f"{output_filename}.svg"
+            dot.render(output_filename, format='svg', cleanup=True)
+            self._fix_svg_viewbox(svg_filename)
+            print(f"SVG файл сохранен как: {svg_filename}")
+        except Exception as e:
+            print(f"Ошибка при сохранении SVG: {e}")
+            with open(f"{output_filename}.dot", 'w', encoding='utf-8') as f:
+                f.write(dot.source)
+            print(f"DOT файл сохранен как {output_filename}.dot")
+        return dot
+
     def __init__(self):
         self.people: Dict[int, str] = {}
         self.marriages: List[Tuple[int, int, List[int]]] = []

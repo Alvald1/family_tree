@@ -26,19 +26,38 @@ def main():
 
         # Определяем директорию для сохранения файлов (там же, где source.txt)
         source_dir = os.path.dirname(os.path.abspath(source_file))
-        output_path = os.path.join(source_dir, 'family_tree')
-        tree_builder.create_family_tree(output_path)
+        png_output_path = os.path.join(source_dir, 'family_tree')
 
-        # Удаляем DOT файл (без расширения), оставляем только PNG и SVG
-        dot_file = output_path  # Graphviz создает файл без расширения
+        # Создаем PNG файл в корневой директории (только PNG)
+        tree_builder.create_family_tree(png_output_path)
+
+        # Создаем SVG файл в папке site
+        site_dir = os.path.join(source_dir, 'site')
+        if not os.path.exists(site_dir):
+            os.makedirs(site_dir)
+        svg_output_path = os.path.join(site_dir, 'family_tree_vector')
+
+        # Создаем отдельно SVG файл в папке site
+        tree_builder.create_svg_only(svg_output_path)
+
+        # Удаляем временные DOT файлы
+        dot_file = png_output_path  # Graphviz создает файл без расширения
         if os.path.exists(dot_file):
             os.remove(dot_file)
+        svg_dot_file = svg_output_path
+        if os.path.exists(svg_dot_file):
+            os.remove(svg_dot_file)
+
+        # Удаляем SVG файл из корневой директории, если он там был создан
+        root_svg = f"{png_output_path}_vector.svg"
+        if os.path.exists(root_svg):
+            os.remove(root_svg)
 
         print("\n" + "=" * 50)
         print("ГОТОВО! Созданы следующие файлы:")
         print("📊 Визуализация:")
-        print(f"  - {output_path}.png (высокое разрешение 300 DPI)")
-        print(f"  - {output_path}_vector.svg (векторный формат)")
+        print(f"  - {png_output_path}.png (высокое разрешение 300 DPI)")
+        print(f"  - {svg_output_path}.svg (векторный формат в папке site)")
         print("=" * 50)
     except FileNotFoundError:
         print("❌ Ошибка: файл source.txt не найден!")
