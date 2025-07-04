@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Персональная страница</title>
+
+    <!-- CSS files -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/person-page.css">
+    <link rel="stylesheet" href="assets/css/notifications.css">
+    <link rel="stylesheet" href="assets/css/photo-gallery.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-button">← Назад к дереву</a>
+            <div class="person-header">
+                <h1 class="person-name" id="personName">Загрузка...</h1>
+                <p class="person-dates" id="personDates">Загрузка дат...</p>
+                <div class="person-details" id="personDetails">
+                    <div class="loading">
+                        <p>Загрузка информации...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="messages">� Сообщения</button>
+                <button class="tab-button" data-tab="photos">📷 Фотографии</button>
+            </div>
+
+            <div class="tab-content active" id="messages-tab">
+                <div class="messages-container">
+                    <div class="messages-header">
+                        <h3>Сообщения и заметки</h3>
+                        <button class="btn add-message-btn" id="addMessageBtn">+ Добавить сообщение</button>
+                    </div>
+                    <div class="messages-list" id="messagesList">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Загрузка сообщений...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="photos-tab">
+                <div class="photos-container">
+                    <div class="photos-header">
+                        <h3>Фотографии</h3>
+                        <button class="btn add-photo-btn" id="addPhotoBtn">+ Добавить фото</button>
+                    </div>
+                    <div class="photos-grid" id="photosGrid">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Загрузка фотографий...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript files -->
+    <script>
+        // Получение ID из URL
+        function getPersonIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+        
+        // Немедленное обновление ФИО и дат
+        async function updatePersonInfo() {
+            const personId = getPersonIdFromUrl();
+            
+            if (!personId) {
+                console.error('No person ID found');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/person/${personId}`);
+                const data = await response.json();
+                
+                // Обновляем все элементы синхронно
+                const nameElement = document.getElementById('personName');
+                const datesElement = document.getElementById('personDates');
+                
+                // Используем requestAnimationFrame для синхронного обновления
+                requestAnimationFrame(() => {
+                    if (nameElement && data.name) {
+                        nameElement.textContent = data.name;
+                    }
+                    
+                    if (datesElement) {
+                        datesElement.textContent = data.dates || 'Даты не указаны';
+                    }
+                    
+                    // Обновляем заголовок документа
+                    document.title = `${data.name || 'Персона'} - Семейное дерево`;
+                });
+                
+            } catch (error) {
+                console.error('Error loading person data:', error);
+                requestAnimationFrame(() => {
+                    const nameElement = document.getElementById('personName');
+                    const datesElement = document.getElementById('personDates');
+                    if (nameElement) {
+                        nameElement.textContent = 'Ошибка загрузки';
+                    }
+                    if (datesElement) {
+                        datesElement.textContent = 'Ошибка загрузки дат';
+                    }
+                });
+            }
+        }
+        
+        // Запускаем сразу при загрузке DOM
+        document.addEventListener('DOMContentLoaded', updatePersonInfo);
+    </script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/notifications.js"></script>
+    <script src="assets/js/person-api.js"></script>
+    <script src="assets/js/person-tabs.js"></script>
+    <script src="assets/js/person-messages.js"></script>
+    <script src="assets/js/person-photos.js"></script>
+    <script src="assets/js/person-page.js"></script>
+    
+    <!-- Временный debug скрипт -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('=== DEBUG: DOM Content Loaded ===');
+            
+            const personId = getPersonIdFromUrl();
+            console.log('=== DEBUG: Person ID from URL:', personId);
+            
+            const nameElement = document.getElementById('personName');
+            const datesElement = document.getElementById('personDates');
+            
+            console.log('=== DEBUG: Name element found:', !!nameElement);
+            console.log('=== DEBUG: Dates element found:', !!datesElement);
+            
+            // Прямое обновление для тестирования
+            setTimeout(async () => {
+                console.log('=== DEBUG: Direct API test starting ===');
+                try {
+                    const response = await fetch('/api/person/node8');
+                    const data = await response.json();
+                    console.log('=== DEBUG: API Response:', data);
+                    
+                    if (nameElement && data.name) {
+                        nameElement.textContent = data.name;
+                        console.log('=== DEBUG: Name updated to:', data.name);
+                    }
+                    
+                    if (datesElement && data.dates) {
+                        datesElement.textContent = data.dates;
+                        console.log('=== DEBUG: Dates updated to:', data.dates);
+                    }
+                } catch (error) {
+                    console.error('=== DEBUG: API Error:', error);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+
+</html>
