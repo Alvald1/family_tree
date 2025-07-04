@@ -22,7 +22,8 @@ class FamilyTreeBuilder:
         # (родитель1, родитель2) - браки с неизвестными детьми
         self.unknown_children_marriages: List[Tuple[int, int]] = []
         # (родитель1, родитель2, известные_дети, количество_неизвестных) - браки с смешанными детьми
-        self.mixed_children_marriages: List[Tuple[int, int, List[int], int]] = []
+        self.mixed_children_marriages: List[Tuple[int, int, List[int], int]] = [
+        ]
 
     def parse_source_file(self, filename: str):
         """Парсинг исходного файла с данными о людях и связях"""
@@ -83,20 +84,22 @@ class FamilyTreeBuilder:
                     # Есть конкретные дети или смесь известных и неизвестных
                     children = []
                     unknown_count = 0
-                    
+
                     for child_str in children_str.split(','):
                         child_str = child_str.strip()
                         if child_str == '?':
                             unknown_count += 1
                         elif child_str and child_str.isdigit():
                             children.append(int(child_str))
-                    
+
                     if unknown_count > 0 and len(children) > 0:
                         # Смешанный брак - есть и известные, и неизвестные дети
-                        self.mixed_children_marriages.append((parent1, parent2, children, unknown_count))
+                        self.mixed_children_marriages.append(
+                            (parent1, parent2, children, unknown_count))
                     elif unknown_count > 0:
                         # Только неизвестные дети (несколько)
-                        self.mixed_children_marriages.append((parent1, parent2, [], unknown_count))
+                        self.mixed_children_marriages.append(
+                            (parent1, parent2, [], unknown_count))
                     else:
                         # Только известные дети - обычный брак
                         self.marriages.append((parent1, parent2, children))
@@ -198,7 +201,7 @@ class FamilyTreeBuilder:
                     style='filled,dashed',
                     fillcolor='#F0F0F0',
                     fontsize='10')
-                
+
                 dot.edge(
                     marriage_node,
                     unknown_child_node,
@@ -338,12 +341,24 @@ class FamilyTreeBuilder:
                                           len(self.childless_marriages) +
                                           len(self.unknown_children_marriages) +
                                           len(self.mixed_children_marriages)}")
-        
-        total_known_children = sum(len(children) for _, _, children in self.marriages)
-        total_mixed_known_children = sum(len(known_children) for _, _, known_children, _ in self.mixed_children_marriages)
-        total_unknown_children = sum(unknown_count for _, _, _, unknown_count in self.mixed_children_marriages)
-        
-        print(f"Количество известных детей от браков: {total_known_children + total_mixed_known_children}")
+
+        total_known_children = sum(len(children)
+                                   for _, _, children in self.marriages)
+        total_mixed_known_children = sum(
+            len(known_children) for _,
+            _,
+            known_children,
+            _ in self.mixed_children_marriages)
+        total_unknown_children = sum(
+            unknown_count for _,
+            _,
+            _,
+            unknown_count in self.mixed_children_marriages)
+
+        print(
+            f"Количество известных детей от браков: {
+                total_known_children +
+                total_mixed_known_children}")
         print(f"Количество неизвестных детей: {total_unknown_children}")
         print(f"Одиночные связи: {len(self.single_parent_children)}")
 
@@ -513,11 +528,12 @@ class FamilyTreeBuilder:
             if parent2 not in self.people:
                 issues.append(
                     f"Супруг {parent2} (брак со смешанными детьми) не найден в списке людей")
-            
+
             # Проверяем, что все известные дети существуют
             for child in known_children:
                 if child not in self.people:
-                    issues.append(f"Ребенок {child} (смешанный брак) не найден в списке людей")
+                    issues.append(
+                        f"Ребенок {child} (смешанный брак) не найден в списке людей")
 
         # Проверяем одиночные связи
         for parent, child in self.single_parent_children:
@@ -601,13 +617,13 @@ class FamilyTreeBuilder:
             self, top_n: int = 3) -> List[Tuple[str, str, int]]:
         """Находит семьи с наибольшим количеством детей"""
         family_sizes = []
-        
+
         # Обычные браки
         for parent1, parent2, children in self.marriages:
             parent1_name = self.people.get(parent1, f"ID {parent1}")
             parent2_name = self.people.get(parent2, f"ID {parent2}")
             family_sizes.append((parent1_name, parent2_name, len(children)))
-        
+
         # Смешанные браки
         for parent1, parent2, known_children, unknown_count in self.mixed_children_marriages:
             parent1_name = self.people.get(parent1, f"ID {parent1}")
