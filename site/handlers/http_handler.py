@@ -48,6 +48,12 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_PATCH(self):
+        if self.path.startswith('/api/'):
+            self.handle_api_patch()
+        else:
+            self.send_error(404)
+
     def do_DELETE(self):
         if self.path.startswith('/api/'):
             self.handle_api_delete()
@@ -99,6 +105,20 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
 
         except Exception as e:
             print(f"Ошибка API PUT: {e}")
+            self.send_error(500)
+
+    def handle_api_patch(self):
+        """Обработка PATCH запросов к API"""
+        try:
+            path_parts = self.path.split('/')
+
+            if len(path_parts) >= 5 and path_parts[2] == 'person':
+                self.person_api.handle_patch(self, path_parts)
+            else:
+                self.send_error(404)
+
+        except Exception as e:
+            print(f"Ошибка API PATCH: {e}")
             self.send_error(500)
 
     def handle_api_delete(self):

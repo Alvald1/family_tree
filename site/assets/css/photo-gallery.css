@@ -317,6 +317,137 @@
     color: #bbb;
 }
 
+/* Стили для пустого состояния в режиме сортировки */
+.photos-grid.sortable .empty-state {
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+    border-radius: 15px;
+    padding: 40px 20px;
+}
+
+.photos-grid.sortable .empty-state .empty-icon {
+    opacity: 0.7;
+    color: #667eea;
+}
+
+.photos-grid.sortable .empty-state h3 {
+    color: #667eea;
+}
+
+.photos-grid.sortable .empty-state p {
+    color: #888;
+}
+
+/* Отключение drag-and-drop в режиме сортировки */
+.photos-grid.sortable {
+    pointer-events: auto;
+}
+
+.photos-grid.sortable::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px dashed transparent;
+    border-radius: 15px;
+    z-index: -1;
+    transition: all 0.3s ease;
+}
+
+/* Убираем обычные стили drag-over в режиме сортировки */
+.photos-grid.sortable.drag-over::before {
+    border-color: transparent !important;
+    background: rgba(102, 126, 234, 0.05) !important;
+}
+
+/* Стили для перетаскивания фотографий */
+.photos-grid.sortable {
+    user-select: none;
+}
+
+.photos-grid.sortable .photo-item {
+    cursor: grab;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.photos-grid.sortable .photo-item:active {
+    cursor: grabbing;
+}
+
+.photos-grid.sortable .photo-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg) scale(0.95);
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.photos-grid.sortable .photo-item.drag-over {
+    transform: scale(1.05);
+    border: 2px dashed #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.photo-sort-handle {
+    background: rgba(102, 126, 234, 0.8) !important;
+    color: white !important;
+    cursor: grab;
+}
+
+.photo-sort-handle:hover {
+    background: rgba(102, 126, 234, 1) !important;
+    cursor: grab;
+}
+
+.photo-sort-handle:active {
+    cursor: grabbing;
+}
+
+.sort-mode-toggle {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+}
+
+.sort-mode-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.sort-mode-toggle.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.sort-instructions {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    color: #667eea;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+}
+
+.sort-instructions.visible {
+    display: block;
+}
+
+.sort-instructions .icon {
+    font-size: 18px;
+    margin-right: 8px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .photos-grid {

@@ -59,6 +59,17 @@ class PersonAPI:
         else:
             handler.send_error(404)
 
+    def handle_patch(self, handler, path_parts):
+        """Обработка PATCH запросов"""
+        person_id = path_parts[3]
+        resource = path_parts[4]
+
+        if resource == 'photos' and len(
+                path_parts) == 6 and path_parts[5] == 'reorder':
+            self._reorder_photos(handler, person_id)
+        else:
+            handler.send_error(404)
+
     def handle_put(self, handler, path_parts):
         """Обработка PUT запросов"""
         person_id = path_parts[3]
@@ -138,4 +149,29 @@ class PersonAPI:
 
         except Exception as e:
             print(f"Ошибка сохранения сообщений: {e}")
+            handler.send_error(500)
+
+    def _reorder_photos(self, handler, person_id):
+        """Изменение порядка фотографий"""
+        try:
+            content_length = int(handler.headers.get('Content-Length', 0))
+            post_data = handler.rfile.read(content_length).decode('utf-8')
+            data = json.loads(post_data)
+
+            new_photos = data.get('photos')
+            new_order = data.get('order')
+
+            reordered_photos = self.photo_service.reorder_photos(
+                person_id,
+                new_photos=new_photos,
+                new_order=new_order
+            )
+            send_json_response(
+                handler, {
+                    'success': True, 'photos': reordered_photos})
+
+        except ValueError as e:
+            handler.send_error(400, str(e))
+        except Exception as e:
+            print(f"Ошибка изменения порядка фотографий: {e}")
             handler.send_error(500)

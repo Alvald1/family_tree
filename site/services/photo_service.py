@@ -92,6 +92,34 @@ class PhotoService:
         photos.pop(photo_index)
         self._save_photos_list(person_id, photos)
 
+    def reorder_photos(self, person_id, new_photos=None, new_order=None):
+        """Изменение порядка фотографий"""
+        photos = self._load_photos_list(person_id)
+
+        if new_photos is not None:
+            # Прямое сохранение нового порядка
+            if len(new_photos) != len(photos):
+                raise ValueError("Неверное количество фотографий")
+            self._save_photos_list(person_id, new_photos)
+            return new_photos
+        elif new_order is not None:
+            # Переупорядочивание по индексам
+            if not isinstance(new_order, list) or len(
+                    new_order) != len(photos):
+                raise ValueError("Неверный порядок фотографий")
+
+            # Проверяем, что все индексы корректны
+            if not all(0 <= idx < len(photos) for idx in new_order):
+                raise ValueError("Неверные индексы в порядке фотографий")
+
+            # Переупорядочиваем фотографии
+            reordered_photos = [photos[idx] for idx in new_order]
+            self._save_photos_list(person_id, reordered_photos)
+            return reordered_photos
+        else:
+            raise ValueError(
+                "Не указан ни новый порядок, ни новый список фотографий")
+
     def _load_photos_list(self, person_id):
         """Загрузка списка фотографий"""
         photos_file = self.photos_dir / f"{person_id}.json"

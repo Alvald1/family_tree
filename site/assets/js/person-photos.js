@@ -1,13 +1,16 @@
-// Управление фотографиями персоны (упрощенная версия без модальных окон)
+// Управление фотографиями персоны с возможностью изменения порядка
 class PersonPhotos {
     constructor() {
         this.photos = [];
+        this.sortMode = false;
+        this.draggedIndex = null;
         this.init();
     }
 
     init() {
         this.bindEvents();
         this.setupDragAndDrop();
+        this.setupSortMode();
     }
 
     /**
@@ -89,41 +92,316 @@ class PersonPhotos {
     }
 
     /**
-     * Настройка drag & drop
+     * Настройка drag & drop для загрузки файлов
      */
     setupDragAndDrop() {
         const photosGrid = document.getElementById('photosGrid');
         if (!photosGrid) return;
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            photosGrid.addEventListener(eventName, this.preventDefaults, false);
-        });
+        // Создаем обработчики как методы класса для возможности их удаления
+        this.handleDragEnter = (e) => {
+            if (this.sortMode) return;
+            this.preventDefaults(e);
+            photosGrid.classList.add('drag-over');
+        };
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            photosGrid.addEventListener(eventName, () => {
-                photosGrid.classList.add('drag-over');
-            }, false);
-        });
+        this.handleDragOver = (e) => {
+            if (this.sortMode) return;
+            this.preventDefaults(e);
+        };
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            photosGrid.addEventListener(eventName, () => {
-                photosGrid.classList.remove('drag-over');
-            }, false);
-        });
+        this.handleDragLeave = (e) => {
+            if (this.sortMode) return;
+            this.preventDefaults(e);
+            photosGrid.classList.remove('drag-over');
+        };
 
-        photosGrid.addEventListener('drop', (e) => {
+        this.handleDrop = (e) => {
+            if (this.sortMode) return;
+            this.preventDefaults(e);
+            photosGrid.classList.remove('drag-over');
+
             const files = Array.from(e.dataTransfer.files);
             const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
             if (imageFiles.length > 0) {
                 this.uploadPhotos(imageFiles);
             }
-        }, false);
+        };
+
+        // Изначально включаем drag-and-drop
+        this.enableDragAndDrop();
     }
 
     preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
+    }
+
+    /**
+     * Настройка режима сортировки
+     */
+    setupSortMode() {
+        // Добавляем кнопку переключения режима сортировки
+        const photosHeader = document.querySelector('.photos-header');
+        if (photosHeader) {
+            const sortToggle = document.createElement('button');
+            sortToggle.className = 'sort-mode-toggle';
+            sortToggle.id = 'sortModeToggle';
+            sortToggle.innerHTML = '🔄 Изменить порядок';
+            sortToggle.title = 'Включить/выключить режим изменения порядка фотографий';
+
+            sortToggle.addEventListener('click', () => {
+                this.toggleSortMode();
+            });
+
+            photosHeader.appendChild(sortToggle);
+        }
+
+        // Добавляем инструкции
+        const photosContainer = document.querySelector('.photos-container');
+        if (photosContainer) {
+            const instructions = document.createElement('div');
+            instructions.className = 'sort-instructions';
+            instructions.id = 'sortInstructions';
+            instructions.innerHTML = `
+                <span class="icon">👆</span>
+                Перетаскивайте фотографии для изменения их порядка. Нажмите "Сохранить порядок" для применения изменений.
+            `;
+
+            photosContainer.insertBefore(instructions, photosContainer.querySelector('.photos-grid'));
+        }
+    }
+
+    /**
+     * Переключение режима сортировки
+     */
+    toggleSortMode() {
+        this.sortMode = !this.sortMode;
+        const grid = document.getElementById('photosGrid');
+        const toggle = document.getElementById('sortModeToggle');
+        const instructions = document.getElementById('sortInstructions');
+
+        if (this.sortMode) {
+            grid?.classList.add('sortable');
+            toggle?.classList.add('active');
+            toggle.innerHTML = '💾 Сохранить порядок';
+            instructions?.classList.add('visible');
+            // Отключаем drag-and-drop для загрузки файлов
+            this.disableDragAndDrop();
+            // Обновляем отображение для режима сортировки
+            this.renderPhotos();
+        } else {
+            grid?.classList.remove('sortable');
+            toggle?.classList.remove('active');
+            toggle.innerHTML = '🔄 Изменить порядок';
+            instructions?.classList.remove('visible');
+            // Очищаем обработчики сортировки
+            this.clearPhotoSorting();
+            // Сохраняем порядок только если есть фотографии
+            if (this.photos.length > 0) {
+                this.savePhotoOrder();
+            }
+            // Включаем обратно drag-and-drop для загрузки файлов
+            this.enableDragAndDrop();
+            // Обновляем отображение для обычного режима
+            this.renderPhotos();
+        }
+    }
+
+    /**
+     * Отключение drag-and-drop для загрузки файлов
+     */
+    disableDragAndDrop() {
+        const photosGrid = document.getElementById('photosGrid');
+        if (!photosGrid) return;
+
+        photosGrid.removeEventListener('dragenter', this.handleDragEnter, false);
+        photosGrid.removeEventListener('dragover', this.handleDragOver, false);
+        photosGrid.removeEventListener('dragleave', this.handleDragLeave, false);
+        photosGrid.removeEventListener('drop', this.handleDrop, false);
+
+        // Убираем все классы связанные с drag-and-drop
+        photosGrid.classList.remove('drag-over');
+    }
+
+    /**
+     * Включение drag-and-drop для загрузки файлов
+     */
+    enableDragAndDrop() {
+        const photosGrid = document.getElementById('photosGrid');
+        if (!photosGrid) return;
+
+        photosGrid.addEventListener('dragenter', this.handleDragEnter, false);
+        photosGrid.addEventListener('dragover', this.handleDragOver, false);
+        photosGrid.addEventListener('dragleave', this.handleDragLeave, false);
+        photosGrid.addEventListener('drop', this.handleDrop, false);
+    }
+
+    /**
+     * Настройка сортировки фотографий
+     */
+    setupPhotoSorting() {
+        const grid = document.getElementById('photosGrid');
+        if (!grid) return;
+
+        grid.querySelectorAll('.photo-item').forEach((item, index) => {
+            item.draggable = true;
+            item.dataset.originalIndex = index;
+
+            // Удаляем старые обработчики если они есть
+            item.removeEventListener('dragstart', item._dragStartHandler);
+            item.removeEventListener('dragend', item._dragEndHandler);
+            item.removeEventListener('dragover', item._dragOverHandler);
+            item.removeEventListener('dragenter', item._dragEnterHandler);
+            item.removeEventListener('dragleave', item._dragLeaveHandler);
+            item.removeEventListener('drop', item._dropHandler);
+
+            // Создаем новые обработчики
+            item._dragStartHandler = (e) => {
+                this.draggedIndex = parseInt(e.target.closest('.photo-item').dataset.index);
+                e.target.closest('.photo-item').classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', e.target.outerHTML);
+            };
+
+            item._dragEndHandler = (e) => {
+                e.target.closest('.photo-item').classList.remove('dragging');
+                grid.querySelectorAll('.photo-item').forEach(i => {
+                    i.classList.remove('drag-over');
+                });
+            };
+
+            item._dragOverHandler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            item._dragEnterHandler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const photoItem = e.target.closest('.photo-item');
+                if (photoItem && photoItem !== document.querySelector('.photo-item.dragging')) {
+                    photoItem.classList.add('drag-over');
+                }
+            };
+
+            item._dragLeaveHandler = (e) => {
+                const photoItem = e.target.closest('.photo-item');
+                if (photoItem && !photoItem.contains(e.relatedTarget)) {
+                    photoItem.classList.remove('drag-over');
+                }
+            };
+
+            item._dropHandler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const photoItem = e.target.closest('.photo-item');
+                if (photoItem) {
+                    photoItem.classList.remove('drag-over');
+
+                    const dropIndex = parseInt(photoItem.dataset.index);
+                    if (this.draggedIndex !== null && this.draggedIndex !== dropIndex) {
+                        this.movePhoto(this.draggedIndex, dropIndex);
+                    }
+                }
+                this.draggedIndex = null;
+            };
+
+            // Добавляем обработчики
+            item.addEventListener('dragstart', item._dragStartHandler);
+            item.addEventListener('dragend', item._dragEndHandler);
+            item.addEventListener('dragover', item._dragOverHandler);
+            item.addEventListener('dragenter', item._dragEnterHandler);
+            item.addEventListener('dragleave', item._dragLeaveHandler);
+            item.addEventListener('drop', item._dropHandler);
+        });
+    }
+
+    /**
+     * Обработка файлов (вызывается из глобального drag-and-drop)
+     */
+    handleFiles(files) {
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+        if (imageFiles.length > 0) {
+            this.uploadPhotos(imageFiles);
+        }
+    }
+
+    /**
+     * Очистка обработчиков сортировки
+     */
+    clearPhotoSorting() {
+        const grid = document.getElementById('photosGrid');
+        if (!grid) return;
+
+        grid.querySelectorAll('.photo-item').forEach(item => {
+            item.draggable = false;
+            item.removeEventListener('dragstart', item._dragStartHandler);
+            item.removeEventListener('dragend', item._dragEndHandler);
+            item.removeEventListener('dragover', item._dragOverHandler);
+            item.removeEventListener('dragenter', item._dragEnterHandler);
+            item.removeEventListener('dragleave', item._dragLeaveHandler);
+            item.removeEventListener('drop', item._dropHandler);
+
+            // Удаляем все классы связанные с перетаскиванием
+            item.classList.remove('dragging', 'drag-over');
+        });
+    }
+
+    /**
+     * Перемещение фотографии в массиве
+     */
+    movePhoto(fromIndex, toIndex) {
+        if (fromIndex === toIndex) return;
+
+        const photo = this.photos.splice(fromIndex, 1)[0];
+        this.photos.splice(toIndex, 0, photo);
+
+        this.renderPhotos();
+        if (this.sortMode) {
+            this.setupPhotoSorting();
+        }
+    }
+
+    /**
+     * Сохранение нового порядка фотографий
+     */
+    async savePhotoOrder() {
+        try {
+            const personId = getPersonIdFromUrl();
+            // Создаем массив с новым порядком - просто последовательность от 0 до длины массива
+            // так как фотографии уже переупорядочены в this.photos
+            const order = Array.from({ length: this.photos.length }, (_, i) => i);
+
+            const response = await fetch(`/api/person/${personId}/photos/reorder`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ order, photos: this.photos })
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка сохранения порядка фотографий');
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                this.photos = result.photos;
+                if (window.showSuccess) {
+                    showSuccess('Порядок фотографий сохранен');
+                }
+            }
+
+        } catch (error) {
+            console.error('Ошибка сохранения порядка фотографий:', error);
+            if (window.showError) {
+                showError('Ошибка сохранения порядка фотографий');
+            }
+        }
     }
 
     /**
@@ -183,12 +461,20 @@ class PersonPhotos {
 
         container.innerHTML = photosHTML;
         this.bindPhotoEvents();
+
+        // Если режим сортировки включен, настраиваем перетаскивание
+        if (this.sortMode) {
+            this.setupPhotoSorting();
+        }
     }
 
     /**
      * Создание HTML для фотографии
      */
     createPhotoHTML(photo, index) {
+        const sortHandle = this.sortMode ?
+            `<button class="btn btn-sm photo-sort-handle" title="Перетащить">↕️</button>` : '';
+
         return `
             <div class="photo-item" data-index="${index}">
                 <div class="photo-wrapper">
@@ -196,6 +482,7 @@ class PersonPhotos {
                          loading="lazy" onclick="window.personPhotos.viewPhoto(${index})">
                     <div class="photo-overlay">
                         <div class="photo-actions">
+                            ${sortHandle}
                             <button class="btn btn-sm photo-view" data-index="${index}" title="Просмотр">👁️</button>
                             <button class="btn btn-sm btn-danger photo-delete" data-index="${index}" title="Удалить">🗑️</button>
                         </div>
@@ -284,13 +571,26 @@ class PersonPhotos {
         const container = document.getElementById('photosGrid');
         if (!container) return;
 
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📷</div>
-                <h3>Нет фотографий</h3>
-                <p>Перетащите файлы сюда или нажмите кнопку "Добавить фото"</p>
-            </div>
-        `;
+        let content;
+        if (this.sortMode) {
+            content = `
+                <div class="empty-state">
+                    <div class="empty-icon">📷</div>
+                    <h3>Нет фотографий для сортировки</h3>
+                    <p>Сначала добавьте фотографии, чтобы изменить их порядок</p>
+                </div>
+            `;
+        } else {
+            content = `
+                <div class="empty-state">
+                    <div class="empty-icon">📷</div>
+                    <h3>Нет фотографий</h3>
+                    <p>Перетащите файлы сюда или нажмите кнопку "Добавить фото"</p>
+                </div>
+            `;
+        }
+
+        container.innerHTML = content;
     }
 
     /**

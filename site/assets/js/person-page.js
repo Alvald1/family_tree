@@ -188,8 +188,9 @@ class PersonPage {
             e.preventDefault();
             dragCounter++;
 
-            // Показываем overlay только для файлов
-            if (e.dataTransfer.types.includes('Files')) {
+            // Показываем overlay только для файлов и не в режиме сортировки
+            if (e.dataTransfer.types.includes('Files') &&
+                !(window.personPhotos && window.personPhotos.sortMode)) {
                 this.showDropOverlay();
             }
         });
@@ -212,6 +213,11 @@ class PersonPage {
             dragCounter = 0;
             this.hideDropOverlay();
 
+            // Не обрабатываем файлы если в режиме сортировки фотографий
+            if (window.personPhotos && window.personPhotos.sortMode) {
+                return;
+            }
+
             // Переключаемся на таб фотографий и обрабатываем файлы
             if (e.dataTransfer.files.length > 0) {
                 this.tabs.switchTab('photos');
@@ -228,6 +234,11 @@ class PersonPage {
      * Показ overlay для drag and drop
      */
     showDropOverlay() {
+        // Не показываем overlay если в режиме сортировки фотографий
+        if (window.personPhotos && window.personPhotos.sortMode) {
+            return;
+        }
+
         let overlay = document.querySelector('.page-drop-overlay');
 
         if (!overlay) {
