@@ -126,7 +126,6 @@ const Utils = {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
-            console.warn('localStorage save error:', error);
             return false;
         }
     },
@@ -144,7 +143,6 @@ const Utils = {
             const item = localStorage.getItem(key);
             return item ? JSON.parse(item) : defaultValue;
         } catch (error) {
-            console.warn('localStorage load error:', error);
             return defaultValue;
         }
     },
@@ -225,7 +223,6 @@ const Utils = {
 
             return response;
         } catch (error) {
-            console.error('Fetch error:', error);
             throw error;
         }
     },

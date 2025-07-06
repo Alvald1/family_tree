@@ -303,7 +303,7 @@ class TreeInteractions {
     toggleFullscreen() {
         if (!document.fullscreenElement) {
             this.container.requestFullscreen().catch(err => {
-                console.error(`Не удалось войти в полноэкранный режим: ${err.message}`);
+                // Ошибка перехода в полноэкранный режим
             });
         } else {
             document.exitFullscreen();

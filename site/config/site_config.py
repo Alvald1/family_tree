@@ -8,7 +8,6 @@ version = "2.0.0"
 # Настройки сервера
 host = "127.0.0.1"
 port = 8000
-debug = True
 
 # Пути к файлам
 data_directory = "person_data"

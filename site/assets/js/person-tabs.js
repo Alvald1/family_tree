@@ -147,7 +147,6 @@ class PersonTabs {
      */
     onTabChange(tabName) {
         // Можно добавить дополнительную логику при смене табов
-        console.log(`Switched to tab: ${tabName}`);
 
         // Отправляем кастомное событие
         const event = new CustomEvent('tabChange', {

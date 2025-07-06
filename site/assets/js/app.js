@@ -29,10 +29,9 @@ class FamilyTreeApp {
             };
 
             this.isInitialized = true;
-            console.log('Family Tree App initialized successfully');
 
         } catch (error) {
-            console.error('Failed to initialize Family Tree App:', error);
+            // Ошибка инициализации
         }
     }
 
@@ -68,11 +67,11 @@ class FamilyTreeApp {
     setupEventListeners() {
         // Обработка ошибок
         window.addEventListener('error', (event) => {
-            console.error('Global error:', event.error);
+            // Обработка критических ошибок
         });
 
         window.addEventListener('unhandledrejection', (event) => {
-            console.error('Unhandled promise rejection:', event.reason);
+            // Обработка необработанных промисов
         });
 
         // Обработка изменения размера окна
@@ -106,20 +105,6 @@ class FamilyTreeApp {
     onPageVisible() {
         // Проверяем, нужно ли обновить дерево
         // Например, если файл мог измениться
-        console.log('Page became visible, checking for updates...');
-    }
-
-    /**
-     * Получение информации о состоянии приложения
-     */
-    getStatus() {
-        return {
-            initialized: this.isInitialized,
-            hasTreeViewer: !!this.treeViewer,
-            hasInteractions: !!this.interactions,
-            currentZoom: this.treeViewer ? this.treeViewer.currentZoom : null,
-            svgLoaded: this.treeViewer ? !!this.treeViewer.svg : false
-        };
     }
 
     /**
@@ -129,10 +114,9 @@ class FamilyTreeApp {
         if (!this.treeViewer) return;
 
         try {
-            console.log('Перезагрузка дерева...');
             await this.treeViewer.loadSVG();
         } catch (error) {
-            console.error('Reload failed:', error);
+            // Ошибка перезагрузки
         }
     }
 
@@ -162,18 +146,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         familyTreeApp = new FamilyTreeApp();
         await familyTreeApp.init();
     } catch (error) {
-        console.error('Failed to start application:', error);
+        // Ошибка запуска приложения
     }
 });
-
-// Глобальные функции для отладки и расширения
-window.familyTree = {
-    app: () => familyTreeApp,
-    reload: () => familyTreeApp?.reload(),
-    status: () => familyTreeApp?.getStatus(),
-    zoom: (level) => familyTreeApp?.treeViewer?.setViewState({ zoom: level }),
-    reset: () => familyTreeApp?.treeViewer?.resetView()
-};
 
 // Экспорт для использования в других модулях
 if (typeof module !== 'undefined' && module.exports) {

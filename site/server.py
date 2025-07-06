@@ -23,7 +23,7 @@ def load_config():
 
         if not os.path.exists(config_path):
             print(f"⚠️  Конфиг файл не найден: {config_path}")
-            return "127.0.0.1", 8000, False
+            return "127.0.0.1", 8000
 
         # Читаем конфиг как обычный Python файл
         config_vars = {}
@@ -32,18 +32,17 @@ def load_config():
 
         host = config_vars.get('host', '127.0.0.1')
         port = config_vars.get('port', 8000)
-        debug = config_vars.get('debug', False)
 
-        return host, port, debug
+        return host, port
 
     except Exception as e:
         print(f"⚠️  Ошибка загрузки конфигурации: {e}")
-        return "127.0.0.1", 8000, False
+        return "127.0.0.1", 8000
 
 
 def main():
     """Главная функция запуска сервера"""
-    host, port, debug = load_config()
+    host, port = load_config()
 
     print(f"Запуск HTTP сервера на порту {port}")
     print(f"Откройте в браузере: http://{host}:{port}")

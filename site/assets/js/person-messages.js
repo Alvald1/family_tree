@@ -38,10 +38,8 @@ class PersonMessages {
      */
     async loadMessages(personId) {
         try {
-            console.log('Loading messages for person:', personId);
             const messagesList = document.getElementById('messagesList');
             if (!messagesList) {
-                console.error('Messages list element not found');
                 return;
             }
 
@@ -54,26 +52,21 @@ class PersonMessages {
             `;
 
             const url = `/api/person/${personId}/messages`;
-            console.log('Fetching messages from:', url);
 
             const response = await fetch(url);
-            console.log('Response status:', response.status);
 
             if (!response.ok) {
                 throw new Error(`Ошибка загрузки сообщений: ${response.status}`);
             }
 
             const rawData = await response.json();
-            console.log('Raw messages data:', rawData);
 
             // Преобразуем сложный формат данных в простые сообщения
             this.messages = this.convertLegacyMessages(rawData);
-            console.log('Converted messages:', this.messages);
 
             this.renderMessages();
 
         } catch (error) {
-            console.error('Ошибка загрузки сообщений:', error);
             const messagesList = document.getElementById('messagesList');
             if (messagesList) {
                 messagesList.innerHTML = `
@@ -92,7 +85,6 @@ class PersonMessages {
      * Преобразование старого формата сообщений в новый
      */
     convertLegacyMessages(rawData) {
-        console.log('Converting messages:', rawData);
         const messages = [];
 
         rawData.forEach(item => {
@@ -117,7 +109,6 @@ class PersonMessages {
             }
         });
 
-        console.log('Converted messages:', messages);
         return messages;
     }
 
@@ -125,15 +116,12 @@ class PersonMessages {
      * Отображение сообщений
      */
     renderMessages() {
-        console.log('Rendering messages, count:', this.messages.length);
         const container = document.getElementById('messagesList');
         if (!container) {
-            console.error('Messages container not found');
             return;
         }
 
         if (this.messages.length === 0) {
-            console.log('No messages to display, showing empty state');
             this.showEmptyState();
             return;
         }
@@ -142,7 +130,6 @@ class PersonMessages {
             this.createMessageHTML(message, index)
         ).join('');
 
-        console.log('Generated HTML for messages:', messagesHTML.substring(0, 100) + '...');
         container.innerHTML = messagesHTML;
         this.bindMessageEvents();
     }
@@ -314,7 +301,6 @@ class PersonMessages {
             }
 
         } catch (error) {
-            console.error('Ошибка удаления сообщения:', error);
             if (window.showError) {
                 showError('Ошибка удаления сообщения');
             }

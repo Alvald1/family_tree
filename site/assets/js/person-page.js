@@ -14,10 +14,8 @@ class PersonPage {
         try {
             // Получаем ID персоны из URL
             this.personId = getPersonIdFromUrl();
-            console.log('PersonPage init: personId =', this.personId);
 
             if (!this.personId) {
-                console.error('PersonPage init: No person ID found in URL');
                 this.showError('ID персоны не указан');
                 return;
             }
@@ -43,10 +41,8 @@ class PersonPage {
             this.setupEventListeners();
 
             this.isInitialized = true;
-            console.log('Person page initialized for:', this.personId);
 
         } catch (error) {
-            console.error('Failed to initialize person page:', error);
             this.showError('Ошибка инициализации страницы');
         }
     }
@@ -62,16 +58,12 @@ class PersonPage {
             // Загружаем основную информацию
             this.personData = await personAPI.getPersonInfo(this.personId);
 
-            // Отладка: выводим полученные данные
-            console.log('Person data loaded:', this.personData);
-
             // Обновляем заголовок страницы
             this.updatePageHeader();
 
             // Примечание: контент табов загружается через restoreActiveTab()
 
         } catch (error) {
-            console.error('Error loading person data:', error);
             this.showError('Ошибка загрузки данных персоны');
         }
     }
@@ -96,10 +88,7 @@ class PersonPage {
      * Обновление заголовка страницы
      */
     updatePageHeader() {
-        console.log('Updating page header with data:', this.personData);
-
         if (!this.personData) {
-            console.log('No person data available');
             return;
         }
 
@@ -107,21 +96,14 @@ class PersonPage {
         const datesElement = document.getElementById('personDates');
         const detailsElement = document.getElementById('personDetails');
 
-        console.log('Name element:', nameElement);
-        console.log('Dates element:', datesElement);
-        console.log('Person name from data:', this.personData.name);
-        console.log('Person dates from data:', this.personData.dates);
-
         if (nameElement) {
             const displayName = this.personData.name || 'Неизвестная персона';
             nameElement.textContent = displayName;
-            console.log('Set name to:', displayName);
         }
 
         if (datesElement) {
             const displayDates = this.personData.dates || '';
             datesElement.textContent = displayDates;
-            console.log('Set dates to:', displayDates);
         }
 
         // Загрузка дополнительной информации в секцию details
@@ -163,12 +145,12 @@ class PersonPage {
     setupEventListeners() {
         // Обработка ошибок
         window.addEventListener('error', (event) => {
-            console.error('Page error:', event.error);
+            // Обработка критических ошибок
         });
 
         // Обработка смены табов
         document.addEventListener('tabChange', (event) => {
-            console.log('Tab changed to:', event.detail.tabName);
+            // Можно добавить логику отслеживания активности
         });
 
         // Обработка изменения URL (если пользователь нажал назад/вперед)
@@ -350,7 +332,6 @@ class PersonPage {
      */
     onPageVisible() {
         // Можно добавить логику обновления данных
-        console.log('Person page became visible');
     }
 
     /**
@@ -405,9 +386,8 @@ class PersonPage {
 
         try {
             await this.loadPersonData();
-            console.log('Данные обновлены');
         } catch (error) {
-            console.error('Error refreshing person data:', error);
+            // Ошибка обновления данных
         }
     }
 
@@ -437,7 +417,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Проверяем, было ли ФИО уже обновлено простым скриптом
         const nameElement = document.getElementById('personName');
         if (nameElement && nameElement.textContent !== 'Загрузка...') {
-            console.log('Person info already updated by simple script');
             // Инициализируем только табы и функциональность
             personPage = new PersonPage();
             personPage.personId = getPersonIdFromUrl();
