@@ -473,7 +473,7 @@ class PersonPhotos {
      */
     createPhotoHTML(photo, index) {
         const sortHandle = this.sortMode ?
-            `<button class="btn btn-sm photo-sort-handle" title="Перетащить">↕️</button>` : '';
+            `<button class="btn btn-sm photo-action-btn photo-sort-handle" title="Перетащить">⚫</button>` : '';
 
         return `
             <div class="photo-item" data-index="${index}">
@@ -483,8 +483,8 @@ class PersonPhotos {
                     <div class="photo-overlay">
                         <div class="photo-actions">
                             ${sortHandle}
-                            <button class="btn btn-sm photo-view" data-index="${index}" title="Просмотр">👁️</button>
-                            <button class="btn btn-sm btn-danger photo-delete" data-index="${index}" title="Удалить">🗑️</button>
+                            <button class="btn btn-sm photo-action-btn photo-view" data-index="${index}" title="Просмотр">👁</button>
+                            <button class="btn btn-sm photo-action-btn btn-danger photo-delete" data-index="${index}" title="Удалить">✕</button>
                         </div>
                     </div>
                 </div>
