@@ -335,8 +335,8 @@ class FamilyTreeBuilder:
         """Создание графа генеалогического дерева"""
         dot = graphviz.Digraph(comment='Генеалогическое дерево')
         dot.attr(rankdir='TB', bgcolor='white', size='20,30!')
-        dot.attr(dpi='300')
-        dot.attr(resolution='300')
+        dot.attr(dpi='400')
+        dot.attr(resolution='400')
         dot.attr(
             'node',
             shape='box',
@@ -449,7 +449,7 @@ class FamilyTreeBuilder:
             dot.render(f"{output_filename}_vector", format='svg', cleanup=True)
             self._fix_svg_viewbox(svg_filename)
             print(f"Генеалогическое дерево сохранено как:")
-            print(f"  - {output_filename}.png (высокое разрешение 300 DPI)")
+            print(f"  - {output_filename}.png (высокое разрешение 400 DPI)")
             print(
                 f"  - {output_filename}_vector.svg (векторный формат с исправленным viewBox)")
         except Exception as e:
@@ -463,8 +463,8 @@ class FamilyTreeBuilder:
         """Создание только SVG файла генеалогического дерева"""
         dot = graphviz.Digraph(comment='Генеалогическое дерево')
         dot.attr(rankdir='TB', bgcolor='white', size='20,30!')
-        dot.attr(dpi='300')
-        dot.attr(resolution='300')
+        dot.attr(dpi='400')
+        dot.attr(resolution='400')
         dot.attr(
             'node',
             shape='box',
