@@ -7,7 +7,7 @@ version = "2.0.0"
 
 # Настройки сервера
 host = "127.0.0.1"
-port = 8000
+port = 9090
 
 # Пути к файлам
 data_directory = "person_data"
