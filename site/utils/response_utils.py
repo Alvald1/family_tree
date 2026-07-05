@@ -33,13 +33,7 @@ def get_current_timestamp():
 
 
 def setup_cors_headers(handler, cacheable=False):
-    """Настройка CORS заголовков"""
-    handler.send_header('Access-Control-Allow-Origin', '*')
-    handler.send_header(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS')
-    handler.send_header('Access-Control-Allow-Headers', 'Content-Type')
-
+    """Настройка общих заголовков ответа для same-origin сайта."""
     headers = STATIC_CACHE_HEADERS if cacheable else NO_CACHE_HEADERS
     for name, value in headers.items():
         handler.send_header(name, value)

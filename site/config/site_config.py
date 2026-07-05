@@ -7,7 +7,7 @@ version = "2.0.0"
 
 # Настройки сервера
 host = "127.0.0.1"
-port = 9000
+port = 8000
 
 # Пути к файлам
 data_directory = "person_data"
@@ -21,8 +21,8 @@ allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 thumbnail_size = (300, 300)
 
 # Настройки безопасности
-enable_cors = True
-allowed_origins = ["*"]
+enable_cors = False
+allowed_origins = []
 max_upload_files = 10
 
 # Настройки кэширования

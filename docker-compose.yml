@@ -10,8 +10,8 @@ services:
       FAMILY_TREE_PORT: 8000
       FAMILY_TREE_DATA_DIR: /data/person_data
       FAMILY_TREE_SOURCE_FILE: /data/source.txt
-    ports:
-      - "9000:8000"
+    expose:
+      - "8000"
     volumes:
       - ./person_data:/data/person_data
       - ./source.txt:/data/source.txt:ro
@@ -26,3 +26,22 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: family-tree-caddy
+    restart: unless-stopped
+    depends_on:
+      family-tree:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

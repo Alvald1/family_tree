@@ -12,6 +12,7 @@ sys.path.insert(0, str(SITE_ROOT))
 from api.routes import parse_api_path
 from config.settings import load_settings
 from handlers.http_handler import PersonalDataHandler
+from utils.response_utils import setup_cors_headers
 
 
 class SettingsTest(unittest.TestCase):
@@ -71,6 +72,23 @@ class ApiRoutesTest(unittest.TestCase):
             parse_api_path("/api/person/node%207/messages"),
             ["api", "person", "node 7", "messages"],
         )
+
+
+class ResponseHeadersTest(unittest.TestCase):
+    def test_same_origin_responses_do_not_allow_all_origins(self):
+        class FakeHandler:
+            def __init__(self):
+                self.headers = []
+
+            def send_header(self, name, value):
+                self.headers.append((name, value))
+
+        handler = FakeHandler()
+
+        setup_cors_headers(handler)
+
+        self.assertNotIn(("Access-Control-Allow-Origin", "*"), handler.headers)
+
 
 
 class CachePolicyTest(unittest.TestCase):
