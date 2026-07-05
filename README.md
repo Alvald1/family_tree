@@ -55,6 +55,13 @@ image. Данные подключаются volume-ами:
 
 - `./source.txt` -> `/data/source.txt` только для чтения
 - `./person_data` -> `/data/person_data`
+- `./site/family_tree_vector.svg` -> `/app/site/family_tree_vector.svg` только для чтения
+
+Перед первым запуском убедитесь, что дерево сгенерировано:
+
+```bash
+python3 tree_gen/run.py
+```
 
 Для остановки:
 

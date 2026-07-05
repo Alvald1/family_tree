@@ -15,6 +15,7 @@ services:
     volumes:
       - ./person_data:/data/person_data
       - ./source.txt:/data/source.txt:ro
+      - ./site/family_tree_vector.svg:/app/site/family_tree_vector.svg:ro
     healthcheck:
       test:
         - CMD
