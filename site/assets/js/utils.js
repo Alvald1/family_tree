@@ -195,13 +195,7 @@ const Utils = {
         };
     },
 
-    /**
-     * Загрузка файла с обработкой ошибок
-     * @param {string} url - URL файла
-     * @param {Object} options - опции запроса
-     * @returns {Promise<Response>} промис с ответом
-     */
-    async fetchWithCache(url, options = {}) {
+    async fetchFresh(url, options = {}) {
         const defaultOptions = {
             cache: 'no-cache',
             headers: {
@@ -214,17 +208,27 @@ const Utils = {
         const timestamp = new Date().getTime();
         const urlWithTimestamp = url + (url.includes('?') ? '&' : '?') + `t=${timestamp}`;
 
-        try {
-            const response = await fetch(urlWithTimestamp, { ...defaultOptions, ...options });
+        return this.fetchChecked(urlWithTimestamp, { ...defaultOptions, ...options });
+    },
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+    async fetchStatic(url, options = {}) {
+        const defaultOptions = {
+            cache: 'force-cache'
+        };
 
-            return response;
-        } catch (error) {
-            throw error;
+        return this.fetchChecked(url, { ...defaultOptions, ...options });
+    },
+
+    async fetchChecked(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        return response;
+    },
+
+    async fetchWithCache(url, options = {}) {
+        return this.fetchFresh(url, options);
     },
 
     /**

@@ -10,6 +10,7 @@ sys.path.insert(0, str(SITE_ROOT))
 
 from api.routes import parse_api_path
 from config.settings import load_settings
+from handlers.http_handler import PersonalDataHandler
 
 
 class SettingsTest(unittest.TestCase):
@@ -42,6 +43,26 @@ class ApiRoutesTest(unittest.TestCase):
         self.assertEqual(
             parse_api_path("/api/person/node%207/messages"),
             ["api", "person", "node 7", "messages"],
+        )
+
+
+class CachePolicyTest(unittest.TestCase):
+    def test_static_assets_are_cacheable(self):
+        self.assertTrue(PersonalDataHandler.is_cacheable_path("/assets/js/app.js"))
+        self.assertTrue(PersonalDataHandler.is_cacheable_path("/assets/css/main.css"))
+        self.assertTrue(PersonalDataHandler.is_cacheable_path("/family_tree_vector.svg"))
+        self.assertTrue(
+            PersonalDataHandler.is_cacheable_path(
+                "/person_data/photos/node7/example.jpg"
+            )
+        )
+
+    def test_html_api_and_json_data_are_not_cacheable(self):
+        self.assertFalse(PersonalDataHandler.is_cacheable_path("/"))
+        self.assertFalse(PersonalDataHandler.is_cacheable_path("/person.html?id=node7"))
+        self.assertFalse(PersonalDataHandler.is_cacheable_path("/api/person/node7"))
+        self.assertFalse(
+            PersonalDataHandler.is_cacheable_path("/person_data/messages/node7.json")
         )
 
 

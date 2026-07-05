@@ -5,6 +5,16 @@
 import json
 from datetime import datetime
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+STATIC_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=3600",
+}
+
 
 def send_json_response(handler, data):
     """Отправка JSON ответа"""
@@ -22,15 +32,14 @@ def get_current_timestamp():
     return datetime.now().isoformat()
 
 
-def setup_cors_headers(handler):
+def setup_cors_headers(handler, cacheable=False):
     """Настройка CORS заголовков"""
     handler.send_header('Access-Control-Allow-Origin', '*')
     handler.send_header(
         'Access-Control-Allow-Methods',
         'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS')
     handler.send_header('Access-Control-Allow-Headers', 'Content-Type')
-    handler.send_header(
-        'Cache-Control',
-        'no-cache, no-store, must-revalidate')
-    handler.send_header('Pragma', 'no-cache')
-    handler.send_header('Expires', '0')
+
+    headers = STATIC_CACHE_HEADERS if cacheable else NO_CACHE_HEADERS
+    for name, value in headers.items():
+        handler.send_header(name, value)

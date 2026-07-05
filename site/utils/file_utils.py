@@ -1,11 +1,12 @@
 """Утилиты для работы с файлами."""
 
 import mimetypes
+import shutil
 import urllib.parse
 from pathlib import Path
 
 
-def serve_file(handler, file_path):
+def serve_file(handler, file_path, send_body=True):
     """Обслуживание статических файлов"""
     try:
         clean_path = urllib.parse.unquote(file_path.split("?", 1)[0].lstrip("/"))
@@ -32,13 +33,14 @@ def serve_file(handler, file_path):
         if mime_type is None:
             mime_type = "application/octet-stream"
 
-        file_data = full_path.read_bytes()
-
         handler.send_response(200)
         handler.send_header("Content-Type", mime_type)
-        handler.send_header("Content-Length", str(len(file_data)))
+        handler.send_header("Content-Length", str(full_path.stat().st_size))
         handler.end_headers()
-        handler.wfile.write(file_data)
+        if not send_body:
+            return
+        with full_path.open("rb") as source:
+            shutil.copyfileobj(source, handler.wfile)
 
     except Exception as e:
         print(f"Ошибка обслуживания файла: {e}")

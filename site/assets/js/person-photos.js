@@ -478,8 +478,9 @@ class PersonPhotos {
         return `
             <div class="photo-item" data-index="${index}">
                 <div class="photo-wrapper">
-                    <img class="photo-image" src="${photo.url}" alt="${this.escapeHtml(photo.caption || 'Фото')}" 
-                         loading="lazy" onclick="window.personPhotos.viewPhoto(${index})">
+                    <img class="photo-image" src="${photo.url}" alt="${this.escapeHtml(photo.caption || 'Фото')}"
+                         loading="lazy" decoding="async" fetchpriority="low"
+                         onclick="window.personPhotos.viewPhoto(${index})">
                     <div class="photo-overlay">
                         <div class="photo-actions">
                             ${sortHandle}

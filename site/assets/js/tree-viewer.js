@@ -27,7 +27,7 @@ class TreeViewer {
         try {
             this.showLoading();
 
-            const response = await Utils.fetchWithCache(AppConfig.files.familyTreeSvg);
+            const response = await Utils.fetchStatic(AppConfig.files.familyTreeSvg);
             const svgText = await response.text();
 
             this.container.innerHTML = svgText;
@@ -157,7 +157,7 @@ class TreeViewer {
     setupPersonNodeStyles(node, nodeId) {
         // Стили для интерактивности
         node.style.cursor = 'pointer';
-        node.style.transition = 'all 0.3s ease';
+        node.style.transition = 'filter 0.2s ease';
 
         // Тултип
         this.addTooltip(node);

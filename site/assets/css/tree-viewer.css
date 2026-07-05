@@ -11,6 +11,7 @@
     overflow: hidden;
     position: relative;
     cursor: grab;
+    contain: layout paint style;
 }
 
 .svg-container:active {
@@ -25,10 +26,6 @@
 }
 
 /* Стили для узлов персон */
-.node {
-    transition: all 0.3s ease;
-}
-
 .node:not([id*="marriage"]) {
     cursor: pointer;
 }

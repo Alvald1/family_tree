@@ -1,6 +1,7 @@
 """Основной HTTP обработчик."""
 
 import http.server
+from urllib.parse import urlparse
 from utils.file_utils import serve_file, ensure_directories_exist
 from utils.response_utils import setup_cors_headers
 from api.person_api import PersonAPI
@@ -9,6 +10,9 @@ from config.settings import load_settings
 
 
 class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
+    CACHEABLE_EXTENSIONS = {
+        ".css", ".js", ".svg", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico",
+    }
     settings = load_settings()
     person_api = None
 
@@ -41,6 +45,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         if self._path_parts() == ["api", "health"]:
             self.send_response(200)
             self.end_headers()
+        elif self.path.startswith('/person_data/'):
+            serve_file(self, self.path, send_body=False)
         else:
             super().do_HEAD()
 
@@ -75,6 +81,17 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
 
     def _path_parts(self):
         return parse_api_path(self.path)
+
+    @classmethod
+    def is_cacheable_path(cls, path):
+        request_path = urlparse(path).path
+        if request_path in {"", "/"}:
+            return False
+        if request_path.startswith("/api/"):
+            return False
+        if request_path.endswith(".html") or request_path.endswith(".json"):
+            return False
+        return any(request_path.endswith(ext) for ext in cls.CACHEABLE_EXTENSIONS)
 
     def handle_api_get(self):
         """Обработка GET запросов к API"""
@@ -149,7 +166,6 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500)
 
     def end_headers(self):
-        # Настройка CORS и других заголовков
-        setup_cors_headers(self)
+        setup_cors_headers(self, cacheable=self.is_cacheable_path(self.path))
 
         super().end_headers()
