@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -30,6 +31,32 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(settings.port, 8123)
             self.assertEqual(settings.data_dir, site_root.parent.resolve() / "custom_data")
             self.assertEqual(settings.source_file, site_root.parent.resolve() / "source.txt")
+
+    def test_environment_overrides_file_config_for_container_runtime(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site_root = Path(temp_dir)
+            config_dir = site_root / "config"
+            config_dir.mkdir()
+            (config_dir / "site_config.py").write_text(
+                'host = "127.0.0.1"\nport = 9000\ndata_directory = "person_data"\n',
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                "os.environ",
+                {
+                    "FAMILY_TREE_HOST": "0.0.0.0",
+                    "FAMILY_TREE_PORT": "8000",
+                    "FAMILY_TREE_DATA_DIR": "/data/person_data",
+                    "FAMILY_TREE_SOURCE_FILE": "/data/source.txt",
+                },
+            ):
+                settings = load_settings(site_root)
+
+            self.assertEqual(settings.host, "0.0.0.0")
+            self.assertEqual(settings.port, 8000)
+            self.assertEqual(settings.data_dir, Path("/data/person_data"))
+            self.assertEqual(settings.source_file, Path("/data/source.txt"))
 
 
 class ApiRoutesTest(unittest.TestCase):

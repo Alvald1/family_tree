@@ -1,0 +1,27 @@
+services:
+  family-tree:
+    build:
+      context: .
+    image: family-tree:latest
+    container_name: family-tree
+    restart: unless-stopped
+    environment:
+      FAMILY_TREE_HOST: 0.0.0.0
+      FAMILY_TREE_PORT: 8000
+      FAMILY_TREE_DATA_DIR: /data/person_data
+      FAMILY_TREE_SOURCE_FILE: /data/source.txt
+    ports:
+      - "9000:8000"
+    volumes:
+      - ./person_data:/data/person_data
+      - ./source.txt:/data/source.txt:ro
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

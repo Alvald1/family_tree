@@ -1,5 +1,6 @@
 """Runtime settings for the family tree site."""
 
+import os
 import runpy
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,16 +25,20 @@ def load_settings(site_root=None):
     if config_path.exists():
         values = runpy.run_path(str(config_path))
 
-    data_directory = values.get("data_directory", "person_data")
+    data_directory = os.environ.get(
+        "FAMILY_TREE_DATA_DIR",
+        values.get("data_directory", "person_data"),
+    )
+    source_file = os.environ.get("FAMILY_TREE_SOURCE_FILE")
     data_dir = _project_path(project_root, data_directory)
 
     return Settings(
         site_root=site_root,
         project_root=project_root,
-        host=values.get("host", "127.0.0.1"),
-        port=int(values.get("port", 8000)),
+        host=os.environ.get("FAMILY_TREE_HOST", values.get("host", "127.0.0.1")),
+        port=int(os.environ.get("FAMILY_TREE_PORT", values.get("port", 8000))),
         data_dir=data_dir,
-        source_file=project_root / "source.txt",
+        source_file=_project_path(project_root, source_file or "source.txt"),
     )
 
 
