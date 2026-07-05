@@ -4,6 +4,7 @@ import os
 import runpy
 from dataclasses import dataclass
 from pathlib import Path
+from auth.yandex_id import AuthConfig, load_auth_config
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,7 @@ class Settings:
     port: int = 8000
     data_dir: Path = None
     source_file: Path = None
+    auth: AuthConfig = AuthConfig()
 
 
 def load_settings(site_root=None):
@@ -39,6 +41,7 @@ def load_settings(site_root=None):
         port=int(os.environ.get("FAMILY_TREE_PORT", values.get("port", 8000))),
         data_dir=data_dir,
         source_file=_project_path(project_root, source_file or "source.txt"),
+        auth=load_auth_config(),
     )
 
 

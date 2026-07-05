@@ -10,6 +10,12 @@ services:
       FAMILY_TREE_PORT: 8000
       FAMILY_TREE_DATA_DIR: /data/person_data
       FAMILY_TREE_SOURCE_FILE: /data/source.txt
+      FAMILY_TREE_AUTH_ENABLED: ${FAMILY_TREE_AUTH_ENABLED:-false}
+      YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
+      YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:-}
+      YANDEX_REDIRECT_URI: ${YANDEX_REDIRECT_URI:-https://drevo.gribovka.ru/auth/callback}
+      YANDEX_ALLOWED_LOGINS: ${YANDEX_ALLOWED_LOGINS:-}
+      FAMILY_TREE_SESSION_SECRET: ${FAMILY_TREE_SESSION_SECRET:-}
     expose:
       - "8000"
     volumes:

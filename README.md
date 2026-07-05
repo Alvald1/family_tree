@@ -101,7 +101,44 @@ Docker Compose поднимает два сервиса:
 docker compose up -d --build
 ```
 
-## 6. Конфигурация исходных данных (`source.txt`)
+## 6. Авторизация через Yandex ID
+
+Создайте приложение Yandex ID типа `Веб-сервисы` и укажите Redirect URI:
+
+```text
+https://drevo.gribovka.ru/auth/callback
+```
+
+Минимальные права:
+
+- доступ к логину, имени и фамилии, полу;
+- доступ к адресу электронной почты опционален.
+
+На сервере создайте `.env` из шаблона `.env.example` и заполните значения:
+
+```bash
+cp .env.example .env
+```
+
+```env
+FAMILY_TREE_AUTH_ENABLED=true
+YANDEX_CLIENT_ID=...
+YANDEX_CLIENT_SECRET=...
+YANDEX_REDIRECT_URI=https://drevo.gribovka.ru/auth/callback
+YANDEX_ALLOWED_LOGINS=login1,login2
+FAMILY_TREE_SESSION_SECRET=<long-random-secret>
+```
+
+`YANDEX_ALLOWED_LOGINS` — список логинов Yandex через запятую. Секреты не
+коммитьте: `.env` исключен из git.
+
+После изменения `.env` перезапустите сервис:
+
+```bash
+docker compose up -d --build
+```
+
+## 7. Конфигурация исходных данных (`source.txt`)
 
 Файл `source.txt` содержит список людей и их родственные связи в формате:
 

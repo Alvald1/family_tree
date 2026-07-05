@@ -10,6 +10,7 @@ SITE_ROOT = PROJECT_ROOT / "site"
 sys.path.insert(0, str(SITE_ROOT))
 
 from api.routes import parse_api_path
+from auth.yandex_id import AuthConfig, YandexIDAuth
 from config.settings import load_settings
 from handlers.http_handler import PersonalDataHandler
 from utils.response_utils import setup_cors_headers
@@ -58,6 +59,68 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(settings.port, 8000)
             self.assertEqual(settings.data_dir, Path("/data/person_data"))
             self.assertEqual(settings.source_file, Path("/data/source.txt"))
+            self.assertFalse(settings.auth.enabled)
+
+    def test_environment_enables_yandex_id_auth(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site_root = Path(temp_dir)
+
+            with patch.dict(
+                "os.environ",
+                {
+                    "FAMILY_TREE_AUTH_ENABLED": "true",
+                    "YANDEX_CLIENT_ID": "client-id",
+                    "YANDEX_CLIENT_SECRET": "client-secret",
+                    "YANDEX_REDIRECT_URI": "https://drevo.gribovka.ru/auth/callback",
+                    "YANDEX_ALLOWED_LOGINS": "alice, bob ",
+                    "FAMILY_TREE_SESSION_SECRET": "session-secret",
+                },
+            ):
+                settings = load_settings(site_root)
+
+            self.assertTrue(settings.auth.enabled)
+            self.assertEqual(settings.auth.client_id, "client-id")
+            self.assertEqual(settings.auth.redirect_uri, "https://drevo.gribovka.ru/auth/callback")
+            self.assertEqual(settings.auth.allowed_logins, frozenset({"alice", "bob"}))
+
+
+class YandexIDAuthTest(unittest.TestCase):
+    def auth(self):
+        return YandexIDAuth(
+            AuthConfig(
+                enabled=True,
+                client_id="client-id",
+                client_secret="client-secret",
+                redirect_uri="https://drevo.gribovka.ru/auth/callback",
+                allowed_logins=frozenset({"alice"}),
+                session_secret="session-secret",
+            )
+        )
+
+    def test_session_cookie_round_trips_allowed_login(self):
+        auth = self.auth()
+
+        cookie_value = auth.create_session_value("alice", now=100)
+
+        self.assertEqual(
+            auth.login_from_cookie_header(f"family_tree_session={cookie_value}", now=101),
+            "alice",
+        )
+
+    def test_tampered_session_cookie_is_rejected(self):
+        auth = self.auth()
+        cookie_value = auth.create_session_value("alice", now=100)
+
+        self.assertIsNone(
+            auth.login_from_cookie_header(f"family_tree_session={cookie_value}x", now=101)
+        )
+
+    def test_health_and_auth_routes_are_public(self):
+        auth = self.auth()
+
+        self.assertTrue(auth.is_public_path("/api/health"))
+        self.assertTrue(auth.is_public_path("/auth/login"))
+        self.assertFalse(auth.is_public_path("/api/person/node7"))
 
 
 class ApiRoutesTest(unittest.TestCase):
@@ -89,6 +152,66 @@ class ResponseHeadersTest(unittest.TestCase):
 
         self.assertNotIn(("Access-Control-Allow-Origin", "*"), handler.headers)
 
+
+class AuthGuardTest(unittest.TestCase):
+    def make_handler(self, path, cookie=None):
+        auth = YandexIDAuth(
+            AuthConfig(
+                enabled=True,
+                client_id="client-id",
+                client_secret="client-secret",
+                redirect_uri="https://drevo.gribovka.ru/auth/callback",
+                allowed_logins=frozenset({"alice"}),
+                session_secret="session-secret",
+            )
+        )
+
+        class FakeHandler:
+            def __init__(self):
+                self.path = path
+                self.auth = auth
+                self.headers = {}
+                self.responses = []
+                self.sent_headers = []
+                self.ended = False
+
+            def send_response(self, code):
+                self.responses.append(code)
+
+            def send_header(self, name, value):
+                self.sent_headers.append((name, value))
+
+            def end_headers(self):
+                self.ended = True
+
+        handler = FakeHandler()
+        if cookie:
+            handler.headers["Cookie"] = cookie
+        return handler, auth
+
+    def test_protected_page_redirects_to_login_without_session(self):
+        handler, _ = self.make_handler("/person.html?id=node7")
+
+        self.assertFalse(PersonalDataHandler._require_auth(handler))
+
+        self.assertEqual(handler.responses, [302])
+        self.assertIn(
+            ("Location", "/auth/login?next=%2Fperson.html%3Fid%3Dnode7"),
+            handler.sent_headers,
+        )
+
+    def test_protected_page_allows_valid_session(self):
+        handler, auth = self.make_handler("/person.html?id=node7")
+        handler.headers["Cookie"] = (
+            f"family_tree_session={auth.create_session_value('alice')}"
+        )
+
+        self.assertTrue(PersonalDataHandler._require_auth(handler))
+
+    def test_health_check_does_not_require_auth(self):
+        handler, _ = self.make_handler("/api/health")
+
+        self.assertTrue(PersonalDataHandler._require_auth(handler))
 
 
 class CachePolicyTest(unittest.TestCase):
