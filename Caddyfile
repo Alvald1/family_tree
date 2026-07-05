@@ -1,3 +1,8 @@
+http://158.160.21.118 {
+    encode gzip zstd
+    reverse_proxy family-tree:8000
+}
+
 drevo.gribovka.ru {
     encode gzip zstd
 
