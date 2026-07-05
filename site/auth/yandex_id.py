@@ -25,6 +25,8 @@ class AuthConfig:
     client_secret: str = ""
     redirect_uri: str = ""
     allowed_logins: frozenset = frozenset()
+    editor_logins: frozenset = frozenset()
+    admin_logins: frozenset = frozenset()
     session_secret: str = ""
     session_cookie_name: str = "family_tree_session"
     state_cookie_name: str = "family_tree_oauth_state"
@@ -34,10 +36,25 @@ class AuthConfig:
 
 def load_auth_config(environ=None):
     environ = environ or os.environ
-    explicit_enabled = _env_bool(environ.get("FAMILY_TREE_AUTH_ENABLED"))
+    enabled_value = environ.get("FAMILY_TREE_AUTH_ENABLED")
+    explicit_enabled = (
+        _env_bool(enabled_value)
+        if enabled_value is not None
+        else _env_bool(environ.get("FAMILY_TREE_CONTAINER_RUNTIME"))
+    )
     allowed_logins = frozenset(
         login.strip().lower()
         for login in environ.get("YANDEX_ALLOWED_LOGINS", "").split(",")
+        if login.strip()
+    )
+    editor_logins = frozenset(
+        login.strip().lower()
+        for login in environ.get("YANDEX_EDITOR_LOGINS", "").split(",")
+        if login.strip()
+    )
+    admin_logins = frozenset(
+        login.strip().lower()
+        for login in environ.get("YANDEX_ADMIN_LOGINS", "").split(",")
         if login.strip()
     )
     config = AuthConfig(
@@ -46,6 +63,8 @@ def load_auth_config(environ=None):
         client_secret=environ.get("YANDEX_CLIENT_SECRET", ""),
         redirect_uri=environ.get("YANDEX_REDIRECT_URI", ""),
         allowed_logins=allowed_logins,
+        editor_logins=editor_logins,
+        admin_logins=admin_logins,
         session_secret=environ.get("FAMILY_TREE_SESSION_SECRET", ""),
     )
 
@@ -65,6 +84,11 @@ def load_auth_config(environ=None):
             raise ValueError(
                 "Yandex ID auth is enabled, but required settings are missing: "
                 + ", ".join(missing)
+            )
+        if not _is_strong_session_secret(config.session_secret):
+            raise ValueError(
+                "FAMILY_TREE_SESSION_SECRET must be at least 32 characters "
+                "and must not use the example value"
             )
 
     return config
@@ -104,6 +128,10 @@ class YandexIDAuth:
         if login not in self.config.allowed_logins:
             return None
         return login
+
+    def can_write(self, login):
+        login = str(login or "").lower()
+        return login in self.config.editor_logins or login in self.config.admin_logins
 
     def create_state_value(self, state, next_path="/", now=None):
         now = int(now if now is not None else time.time())
@@ -229,6 +257,12 @@ class YandexIDAuth:
 
 def _env_bool(value):
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_strong_session_secret(value):
+    if not value or len(value) < 32:
+        return False
+    return value != "change-me-to-a-long-random-secret"
 
 
 def _cookie_header(name, value, max_age):

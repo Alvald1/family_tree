@@ -106,6 +106,79 @@ class PhotoServiceTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 service.reorder_photos("node9", new_photos=[{"filename": "a.jpg"}])
 
+    def test_upload_rejects_svg_even_with_image_content_type(self):
+        boundary = "----test-boundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="photo"; filename="bad.svg"\r\n'
+            "Content-Type: image/svg+xml\r\n"
+            "\r\n"
+            "<svg><script>alert(1)</script></svg>"
+            f"\r\n--{boundary}--\r\n"
+        ).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = PhotoService(temp_dir)
+
+            with self.assertRaises(ValueError):
+                service.upload_photo("node9", body, boundary)
+
+    def test_upload_rejects_mismatched_magic_bytes(self):
+        boundary = "----test-boundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="photo"; filename="bad.png"\r\n'
+            "Content-Type: image/png\r\n"
+            "\r\n"
+        ).encode("utf-8") + b"not really png" + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = PhotoService(temp_dir)
+
+            with self.assertRaises(ValueError):
+                service.upload_photo("node9", body, boundary)
+
+    def test_reorder_rejects_client_supplied_photo_list(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = PhotoService(temp_dir)
+            (Path(temp_dir) / "node9.json").write_text(
+                json.dumps([
+                    {"filename": "a.png", "url": "/person_data/photos/node9/a.png"},
+                    {"filename": "b.png", "url": "/person_data/photos/node9/b.png"},
+                ]),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                service.reorder_photos(
+                    "node9",
+                    new_photos=[
+                        {"filename": "evil.png", "url": "javascript:alert(1)"},
+                        {"filename": "evil2.png", "url": "\" onerror=\"alert(1)"},
+                    ],
+                )
+
+    def test_reorder_accepts_only_saved_photo_indices(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = PhotoService(temp_dir)
+            (Path(temp_dir) / "node9.json").write_text(
+                json.dumps([
+                    {"filename": "a.png", "url": "/person_data/photos/node9/a.png"},
+                    {"filename": "b.png", "url": "/person_data/photos/node9/b.png"},
+                ]),
+                encoding="utf-8",
+            )
+
+            photos = service.reorder_photos("node9", new_order=[1, 0])
+
+            self.assertEqual(
+                [photo["url"] for photo in photos],
+                [
+                    "/person_data/photos/node9/b.png",
+                    "/person_data/photos/node9/a.png",
+                ],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

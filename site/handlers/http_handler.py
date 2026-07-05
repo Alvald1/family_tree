@@ -2,6 +2,8 @@
 
 import http.server
 import secrets
+import time
+from collections import defaultdict, deque
 from urllib.parse import parse_qs, quote, urlparse
 from utils.file_utils import serve_file, ensure_directories_exist
 from utils.response_utils import setup_cors_headers
@@ -11,6 +13,24 @@ from config.settings import load_settings
 from auth.yandex_id import YandexIDAuth
 
 
+class RateLimiter:
+    def __init__(self, limit=120, window_seconds=60):
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.requests = defaultdict(deque)
+
+    def allow(self, key, now=None):
+        now = now if now is not None else time.time()
+        entries = self.requests[key]
+        cutoff = now - self.window_seconds
+        while entries and entries[0] <= cutoff:
+            entries.popleft()
+        if len(entries) >= self.limit:
+            return False
+        entries.append(now)
+        return True
+
+
 class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     CACHEABLE_EXTENSIONS = {
         ".css", ".js", ".svg", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico",
@@ -18,6 +38,7 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     settings = load_settings()
     person_api = None
     auth = YandexIDAuth(settings.auth)
+    rate_limiter = RateLimiter()
 
     @classmethod
     def configure(cls, settings):
@@ -33,6 +54,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -45,7 +68,7 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_api_get()
         # Обработка запросов к данным персон (включая фотографии)
         elif self.path.startswith('/person_data/'):
-            serve_file(self, self.path)
+            serve_file(self, self.path, data_dir=self.settings.data_dir)
         elif self.path == '/':
             self.path = '/index.html'
             super().do_GET()
@@ -53,6 +76,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_HEAD(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -60,11 +85,13 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
         elif self.path.startswith('/person_data/'):
-            serve_file(self, self.path, send_body=False)
+            serve_file(self, self.path, send_body=False, data_dir=self.settings.data_dir)
         else:
             super().do_HEAD()
 
     def do_POST(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -74,6 +101,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def do_PUT(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -83,6 +112,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def do_PATCH(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -92,6 +123,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def do_DELETE(self):
+        if not self._check_rate_limit():
+            return
         if not self._require_auth():
             return
 
@@ -127,7 +160,17 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             return True
 
         cookie_header = self.headers.get("Cookie", "")
-        if self.auth.login_from_cookie_header(cookie_header):
+        login = self.auth.login_from_cookie_header(cookie_header)
+        if login:
+            is_write_request = getattr(self, "command", "GET") in {
+                "POST", "PUT", "PATCH", "DELETE",
+            }
+            if is_write_request and not self.auth.can_write(login):
+                self.send_response(403)
+                self.end_headers()
+                return False
+            if is_write_request:
+                print(f"AUDIT write login={login} method={self.command} path={urlparse(self.path).path}")
             return True
 
         request_path = urlparse(self.path).path
@@ -138,6 +181,21 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
 
         self.send_response(302)
         self.send_header("Location", f"/auth/login?next={quote(self.path, safe='')}")
+        self.end_headers()
+        return False
+
+    def _is_write_request(self):
+        return getattr(self, "command", "GET") in {"POST", "PUT", "PATCH", "DELETE"}
+
+    def _audit_write(self, login):
+        print(f"AUDIT write login={login} method={self.command} path={urlparse(self.path).path}")
+
+    def _check_rate_limit(self):
+        client_ip = self.client_address[0] if getattr(self, "client_address", None) else "unknown"
+        if self.rate_limiter.allow(client_ip):
+            return True
+        self.send_response(429)
+        self.send_header("Retry-After", str(self.rate_limiter.window_seconds))
         self.end_headers()
         return False
 

@@ -280,6 +280,12 @@ window.escapeHtml = (unsafe) => {
         .replace(/'/g, "&#039;");
 };
 
+document.addEventListener('click', (event) => {
+    if (event.target.closest('.js-reload')) {
+        window.location.reload();
+    }
+});
+
 // Экспорт для использования в других модулях
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Utils;

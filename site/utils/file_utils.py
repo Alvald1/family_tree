@@ -6,7 +6,7 @@ import urllib.parse
 from pathlib import Path
 
 
-def serve_file(handler, file_path, send_body=True):
+def serve_file(handler, file_path, send_body=True, data_dir=None):
     """Обслуживание статических файлов"""
     try:
         clean_path = urllib.parse.unquote(file_path.split("?", 1)[0].lstrip("/"))
@@ -16,7 +16,7 @@ def serve_file(handler, file_path, send_body=True):
             return
 
         project_root = Path(__file__).resolve().parents[2]
-        data_root = (project_root / "person_data").resolve()
+        data_root = Path(data_dir or (project_root / "person_data")).resolve()
         relative_path = clean_path.removeprefix("person_data/")
         full_path = (data_root / relative_path).resolve()
 

@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from api.routes import parse_api_path
 from auth.yandex_id import AuthConfig, YandexIDAuth
 from config.settings import load_settings
 from handlers.http_handler import PersonalDataHandler
+from utils.file_utils import serve_file
 from utils.response_utils import setup_cors_headers
 
 
@@ -61,6 +63,29 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(settings.source_file, Path("/data/source.txt"))
             self.assertFalse(settings.auth.enabled)
 
+    def test_container_runtime_defaults_to_auth_enabled(self):
+        with patch.dict("os.environ", {"FAMILY_TREE_CONTAINER_RUNTIME": "true"}, clear=True):
+            with self.assertRaises(ValueError):
+                load_settings(SITE_ROOT)
+
+    def test_enabled_auth_rejects_weak_session_secret(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            site_root = Path(temp_dir)
+
+            with patch.dict(
+                "os.environ",
+                {
+                    "FAMILY_TREE_AUTH_ENABLED": "true",
+                    "YANDEX_CLIENT_ID": "client-id",
+                    "YANDEX_CLIENT_SECRET": "client-secret",
+                    "YANDEX_REDIRECT_URI": "https://drevo.gribovka.ru/auth/callback",
+                    "YANDEX_ALLOWED_LOGINS": "alice",
+                    "FAMILY_TREE_SESSION_SECRET": "short",
+                },
+            ):
+                with self.assertRaises(ValueError):
+                    load_settings(site_root)
+
     def test_environment_enables_yandex_id_auth(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             site_root = Path(temp_dir)
@@ -73,7 +98,9 @@ class SettingsTest(unittest.TestCase):
                     "YANDEX_CLIENT_SECRET": "client-secret",
                     "YANDEX_REDIRECT_URI": "https://drevo.gribovka.ru/auth/callback",
                     "YANDEX_ALLOWED_LOGINS": "alice, bob ",
-                    "FAMILY_TREE_SESSION_SECRET": "session-secret",
+                    "YANDEX_EDITOR_LOGINS": "bob",
+                    "YANDEX_ADMIN_LOGINS": "carol",
+                    "FAMILY_TREE_SESSION_SECRET": "a" * 32,
                 },
             ):
                 settings = load_settings(site_root)
@@ -82,6 +109,8 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(settings.auth.client_id, "client-id")
             self.assertEqual(settings.auth.redirect_uri, "https://drevo.gribovka.ru/auth/callback")
             self.assertEqual(settings.auth.allowed_logins, frozenset({"alice", "bob"}))
+            self.assertEqual(settings.auth.editor_logins, frozenset({"bob"}))
+            self.assertEqual(settings.auth.admin_logins, frozenset({"carol"}))
 
 
 class YandexIDAuthTest(unittest.TestCase):
@@ -93,6 +122,8 @@ class YandexIDAuthTest(unittest.TestCase):
                 client_secret="client-secret",
                 redirect_uri="https://drevo.gribovka.ru/auth/callback",
                 allowed_logins=frozenset({"alice"}),
+                editor_logins=frozenset({"editor"}),
+                admin_logins=frozenset({"admin"}),
                 session_secret="session-secret",
             )
         )
@@ -121,6 +152,23 @@ class YandexIDAuthTest(unittest.TestCase):
         self.assertTrue(auth.is_public_path("/api/health"))
         self.assertTrue(auth.is_public_path("/auth/login"))
         self.assertFalse(auth.is_public_path("/api/person/node7"))
+
+    def test_write_access_requires_editor_or_admin(self):
+        auth = self.auth()
+
+        self.assertFalse(auth.can_write("alice"))
+        self.assertTrue(auth.can_write("editor"))
+        self.assertTrue(auth.can_write("admin"))
+
+
+class RateLimiterTest(unittest.TestCase):
+    def test_blocks_after_limit_inside_window(self):
+        limiter = PersonalDataHandler.rate_limiter.__class__(limit=2, window_seconds=60)
+
+        self.assertTrue(limiter.allow("ip", now=100))
+        self.assertTrue(limiter.allow("ip", now=101))
+        self.assertFalse(limiter.allow("ip", now=102))
+        self.assertTrue(limiter.allow("ip", now=161))
 
 
 class ApiRoutesTest(unittest.TestCase):
@@ -212,6 +260,60 @@ class AuthGuardTest(unittest.TestCase):
         handler, _ = self.make_handler("/api/health")
 
         self.assertTrue(PersonalDataHandler._require_auth(handler))
+
+    def test_write_request_requires_editor_session(self):
+        handler, auth = self.make_handler("/api/person/node7/messages")
+        handler.command = "POST"
+        handler.client_address = ("127.0.0.1", 12345)
+        handler.headers["Cookie"] = (
+            f"family_tree_session={auth.create_session_value('alice')}"
+        )
+
+        self.assertFalse(PersonalDataHandler._require_auth(handler))
+        self.assertEqual(handler.responses, [403])
+
+
+class FileServingTest(unittest.TestCase):
+    def test_person_data_serves_from_configured_data_dir(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_dir = Path(temp_dir) / "private_data"
+            photo_dir = data_dir / "photos" / "node1"
+            photo_dir.mkdir(parents=True)
+            (photo_dir / "face.png").write_bytes(b"image")
+
+            class FakeHandler:
+                def __init__(self):
+                    self.responses = []
+                    self.headers = []
+                    self.body = bytearray()
+
+                    class Writer:
+                        def __init__(self, outer):
+                            self.outer = outer
+
+                        def write(self, data):
+                            self.outer.body.extend(data)
+
+                    self.wfile = Writer(self)
+
+                def send_response(self, code):
+                    self.responses.append(code)
+
+                def send_header(self, name, value):
+                    self.headers.append((name, value))
+
+                def end_headers(self):
+                    pass
+
+                def send_error(self, code, message=None):
+                    self.responses.append(code)
+
+            handler = FakeHandler()
+
+            serve_file(handler, "/person_data/photos/node1/face.png", data_dir=data_dir)
+
+            self.assertEqual(handler.responses, [200])
+            self.assertEqual(bytes(handler.body), b"image")
 
 
 class CachePolicyTest(unittest.TestCase):

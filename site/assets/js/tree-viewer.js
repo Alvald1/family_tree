@@ -89,7 +89,7 @@ class TreeViewer {
                     <li>Убедитесь, что файл source.txt содержит данные</li>
                     <li>Проверьте, что установлен Graphviz</li>
                 </ul>
-                <button onclick="location.reload()" class="btn">
+                <button class="btn js-reload">
                     🔄 Перезагрузить страницу
                 </button>
             </div>

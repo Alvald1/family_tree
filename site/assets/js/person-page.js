@@ -342,7 +342,7 @@ class PersonPage {
                     <p>${Utils.escapeHtml(message)}</p>
                     <div style="margin-top: 20px;">
                         <a href="index.html" class="btn">← Вернуться к дереву</a>
-                        <button onclick="location.reload()" class="btn btn-secondary" style="margin-left: 10px;">🔄 Обновить</button>
+                        <button class="btn btn-secondary js-reload" style="margin-left: 10px;">🔄 Обновить</button>
                     </div>
                 </div>
             `;

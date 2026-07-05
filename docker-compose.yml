@@ -8,13 +8,16 @@ services:
     environment:
       FAMILY_TREE_HOST: 0.0.0.0
       FAMILY_TREE_PORT: 8000
+      FAMILY_TREE_CONTAINER_RUNTIME: "true"
       FAMILY_TREE_DATA_DIR: /data/person_data
       FAMILY_TREE_SOURCE_FILE: /data/source.txt
-      FAMILY_TREE_AUTH_ENABLED: ${FAMILY_TREE_AUTH_ENABLED:-false}
+      FAMILY_TREE_AUTH_ENABLED: ${FAMILY_TREE_AUTH_ENABLED:-true}
       YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
       YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:-}
       YANDEX_REDIRECT_URI: ${YANDEX_REDIRECT_URI:-https://drevo.gribovka.ru/auth/callback}
       YANDEX_ALLOWED_LOGINS: ${YANDEX_ALLOWED_LOGINS:-}
+      YANDEX_EDITOR_LOGINS: ${YANDEX_EDITOR_LOGINS:-}
+      YANDEX_ADMIN_LOGINS: ${YANDEX_ADMIN_LOGINS:-}
       FAMILY_TREE_SESSION_SECRET: ${FAMILY_TREE_SESSION_SECRET:-}
     expose:
       - "8000"
@@ -34,7 +37,7 @@ services:
       start_period: 10s
 
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.8-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
     container_name: family-tree-caddy
     restart: unless-stopped
     depends_on:

@@ -10,6 +10,14 @@ from storage.json_store import JsonListStore, validate_record_id
 
 
 class PhotoService:
+    ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+    ALLOWED_CONTENT_TYPES = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
+
     def __init__(self, photos_dir):
         self.photos_dir = Path(photos_dir)
         self.photos_dir.mkdir(parents=True, exist_ok=True)
@@ -35,7 +43,8 @@ class PhotoService:
                 raise ValueError("Пустой файл")
 
             original_filename = Path(original_filename).name
-            file_extension = os.path.splitext(original_filename)[1]
+            file_extension = os.path.splitext(original_filename)[1].lower()
+            self._validate_upload(original_filename, file_extension, content_type, file_data)
             unique_filename = f"{uuid.uuid4()}{file_extension}"
 
             person_photos_dir = self.photos_dir / safe_person_id
@@ -81,10 +90,7 @@ class PhotoService:
         photos = self._load_photos_list(person_id)
 
         if new_photos is not None:
-            if not isinstance(new_photos, list) or len(new_photos) != len(photos):
-                raise ValueError("Неверное количество фотографий")
-            self._save_photos_list(person_id, new_photos)
-            return new_photos
+            raise ValueError("Принимается только порядок фотографий по индексам")
         elif new_order is not None:
             if not isinstance(new_order, list) or len(
                     new_order) != len(photos):
@@ -117,3 +123,20 @@ class PhotoService:
             f"boundary={boundary}\r\nMIME-Version: 1.0\r\n\r\n"
         ).encode("utf-8")
         return BytesParser(policy=policy.default).parsebytes(header + post_data)
+
+    def _validate_upload(self, original_filename, file_extension, content_type, file_data):
+        if file_extension not in self.ALLOWED_EXTENSIONS:
+            raise ValueError("Неподдерживаемый формат изображения")
+        if content_type != self.ALLOWED_CONTENT_TYPES[file_extension]:
+            raise ValueError("Тип содержимого не соответствует расширению файла")
+        if not self._has_allowed_magic_bytes(file_extension, file_data):
+            raise ValueError("Содержимое файла не похоже на разрешенное изображение")
+
+    def _has_allowed_magic_bytes(self, file_extension, file_data):
+        if file_extension in {".jpg", ".jpeg"}:
+            return file_data.startswith(b"\xff\xd8\xff")
+        if file_extension == ".png":
+            return file_data.startswith(b"\x89PNG\r\n")
+        if file_extension == ".webp":
+            return file_data.startswith(b"RIFF") and file_data[8:12] == b"WEBP"
+        return False

@@ -4,6 +4,7 @@ class PersonPhotos {
         this.photos = [];
         this.sortMode = false;
         this.draggedIndex = null;
+        this.sortOriginalFilenames = [];
         this.init();
     }
 
@@ -33,7 +34,7 @@ class PersonPhotos {
         // Создаем временный input для выбора файла
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/*';
+        input.accept = '.jpg,.jpeg,.png,.webp';
         input.multiple = true;
 
         input.addEventListener('change', (e) => {
@@ -54,7 +55,7 @@ class PersonPhotos {
             const personId = getPersonIdFromUrl();
 
             for (const file of files) {
-                if (!file.type.startsWith('image/')) {
+                if (!this.isAllowedImageFile(file)) {
                     console.warn('Пропускаем файл, не являющийся изображением:', file.name);
                     continue;
                 }
@@ -122,7 +123,7 @@ class PersonPhotos {
             photosGrid.classList.remove('drag-over');
 
             const files = Array.from(e.dataTransfer.files);
-            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            const imageFiles = files.filter(file => this.isAllowedImageFile(file));
 
             if (imageFiles.length > 0) {
                 this.uploadPhotos(imageFiles);
@@ -176,7 +177,7 @@ class PersonPhotos {
     /**
      * Переключение режима сортировки
      */
-    toggleSortMode() {
+    async toggleSortMode() {
         this.sortMode = !this.sortMode;
         const grid = document.getElementById('photosGrid');
         const toggle = document.getElementById('sortModeToggle');
@@ -189,6 +190,7 @@ class PersonPhotos {
             instructions?.classList.add('visible');
             // Отключаем drag-and-drop для загрузки файлов
             this.disableDragAndDrop();
+            this.sortOriginalFilenames = this.photos.map(photo => photo.filename);
             // Обновляем отображение для режима сортировки
             this.renderPhotos();
         } else {
@@ -200,10 +202,11 @@ class PersonPhotos {
             this.clearPhotoSorting();
             // Сохраняем порядок только если есть фотографии
             if (this.photos.length > 0) {
-                this.savePhotoOrder();
+                await this.savePhotoOrder();
             }
             // Включаем обратно drag-and-drop для загрузки файлов
             this.enableDragAndDrop();
+            this.sortOriginalFilenames = [];
             // Обновляем отображение для обычного режима
             this.renderPhotos();
         }
@@ -324,7 +327,7 @@ class PersonPhotos {
      * Обработка файлов (вызывается из глобального drag-and-drop)
      */
     handleFiles(files) {
-        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+        const imageFiles = Array.from(files).filter(file => this.isAllowedImageFile(file));
         if (imageFiles.length > 0) {
             this.uploadPhotos(imageFiles);
         }
@@ -372,16 +375,17 @@ class PersonPhotos {
     async savePhotoOrder() {
         try {
             const personId = getPersonIdFromUrl();
-            // Создаем массив с новым порядком - просто последовательность от 0 до длины массива
-            // так как фотографии уже переупорядочены в this.photos
-            const order = Array.from({ length: this.photos.length }, (_, i) => i);
+            const order = this.photos.map(photo => this.sortOriginalFilenames.indexOf(photo.filename));
+            if (order.some(index => index < 0)) {
+                throw new Error('Ошибка построения порядка фотографий');
+            }
 
             const response = await fetch(`/api/person/${personId}/photos/reorder`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ order, photos: this.photos })
+                body: JSON.stringify({ order })
             });
 
             if (!response.ok) {
@@ -391,6 +395,7 @@ class PersonPhotos {
             const result = await response.json();
             if (result.success) {
                 this.photos = result.photos;
+                this.sortOriginalFilenames = this.photos.map(photo => photo.filename);
                 if (window.showSuccess) {
                     showSuccess('Порядок фотографий сохранен');
                 }
@@ -436,7 +441,7 @@ class PersonPhotos {
                     <div class="error-message">
                         <h3>Ошибка загрузки фотографий</h3>
                         <p>Не удалось загрузить фотографии. Попробуйте обновить страницу.</p>
-                        <button onclick="window.location.reload()" class="btn">Обновить</button>
+                        <button class="btn js-reload">Обновить</button>
                     </div>
                 `;
             }
@@ -474,13 +479,13 @@ class PersonPhotos {
     createPhotoHTML(photo, index) {
         const sortHandle = this.sortMode ?
             `<button class="btn btn-sm photo-action-btn photo-sort-handle" title="Перетащить">⚫</button>` : '';
+        const photoUrl = this.safePhotoUrl(photo.url);
 
         return `
             <div class="photo-item" data-index="${index}">
                 <div class="photo-wrapper">
-                    <img class="photo-image" src="${photo.url}" alt="${this.escapeHtml(photo.caption || 'Фото')}"
-                         loading="lazy" decoding="async" fetchpriority="low"
-                         onclick="window.personPhotos.viewPhoto(${index})">
+                    <img class="photo-image" src="${this.escapeHtml(photoUrl)}" alt="${this.escapeHtml(photo.caption || 'Фото')}"
+                         loading="lazy" decoding="async" fetchpriority="low" data-index="${index}">
                     <div class="photo-overlay">
                         <div class="photo-actions">
                             ${sortHandle}
@@ -513,6 +518,13 @@ class PersonPhotos {
             });
         });
 
+        container.querySelectorAll('.photo-image').forEach(img => {
+            img.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.viewPhoto(index);
+            });
+        });
+
         // Удаление фото
         container.querySelectorAll('.photo-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -528,7 +540,10 @@ class PersonPhotos {
      */
     viewPhoto(index) {
         if (this.photos[index]) {
-            window.open(this.photos[index].url, '_blank');
+            const photoUrl = this.safePhotoUrl(this.photos[index].url);
+            if (photoUrl) {
+                window.open(photoUrl, '_blank', 'noopener');
+            }
         }
     }
 
@@ -604,6 +619,24 @@ class PersonPhotos {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    isAllowedImageFile(file) {
+        const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        const allowedExtensions = /\.(jpe?g|png|webp)$/i;
+        return allowedTypes.has(file.type) && allowedExtensions.test(file.name);
+    }
+
+    safePhotoUrl(url) {
+        if (typeof url !== 'string') return '';
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.origin !== window.location.origin) return '';
+            if (!parsed.pathname.startsWith('/person_data/photos/')) return '';
+            return parsed.pathname;
+        } catch (error) {
+            return '';
+        }
     }
 }
 

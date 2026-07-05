@@ -212,7 +212,7 @@ class PersonMessages {
                         <h3>Ошибка загрузки сообщений</h3>
                         <p>Не удалось загрузить сообщения. Попробуйте обновить страницу.</p>
                         <p class="error-details">Ошибка: ${error.message}</p>
-                        <button onclick="window.location.reload()" class="btn">Обновить</button>
+                        <button class="btn js-reload">Обновить</button>
                     </div>
                 `;
             }

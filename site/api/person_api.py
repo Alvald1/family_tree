@@ -9,6 +9,9 @@ from services.message_service import MessageService
 
 
 class PersonAPI:
+    MAX_JSON_BODY_BYTES = 1024 * 1024
+    MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024
+
     def __init__(self, data_dirs, source_file=None):
         self.person_service = PersonService(source_file=source_file)
         self.photo_service = PhotoService(data_dirs['photos'])
@@ -115,7 +118,10 @@ class PersonAPI:
                 return
 
             boundary = content_type.split('boundary=')[1]
-            content_length = int(handler.headers.get('Content-Length', 0))
+            content_length = self._content_length(handler)
+            if content_length > self.MAX_UPLOAD_BODY_BYTES:
+                handler.send_error(413, "Файл слишком большой")
+                return
             post_data = handler.rfile.read(content_length)
 
             new_photo = self.photo_service.upload_photo(
@@ -131,7 +137,10 @@ class PersonAPI:
     def _add_blog_post(self, handler, person_id):
         """Добавление записи в блог"""
         try:
-            content_length = int(handler.headers.get('Content-Length', 0))
+            content_length = self._content_length(handler)
+            if content_length > self.MAX_JSON_BODY_BYTES:
+                handler.send_error(413, "Запрос слишком большой")
+                return
             post_data = handler.rfile.read(content_length).decode('utf-8')
             post_info = json.loads(post_data)
 
@@ -145,7 +154,10 @@ class PersonAPI:
     def _save_messages(self, handler, person_id):
         """Сохранение сообщений"""
         try:
-            content_length = int(handler.headers.get('Content-Length', 0))
+            content_length = self._content_length(handler)
+            if content_length > self.MAX_JSON_BODY_BYTES:
+                handler.send_error(413, "Запрос слишком большой")
+                return
             post_data = handler.rfile.read(content_length).decode('utf-8')
             messages = json.loads(post_data)
 
@@ -159,16 +171,19 @@ class PersonAPI:
     def _reorder_photos(self, handler, person_id):
         """Изменение порядка фотографий"""
         try:
-            content_length = int(handler.headers.get('Content-Length', 0))
+            content_length = self._content_length(handler)
+            if content_length > self.MAX_JSON_BODY_BYTES:
+                handler.send_error(413, "Запрос слишком большой")
+                return
             post_data = handler.rfile.read(content_length).decode('utf-8')
             data = json.loads(post_data)
 
-            new_photos = data.get('photos')
+            if 'photos' in data:
+                raise ValueError("Клиентский список фотографий не принимается")
             new_order = data.get('order')
 
             reordered_photos = self.photo_service.reorder_photos(
                 person_id,
-                new_photos=new_photos,
                 new_order=new_order
             )
             send_json_response(
@@ -180,3 +195,12 @@ class PersonAPI:
         except Exception as e:
             print(f"Ошибка изменения порядка фотографий: {e}")
             handler.send_error(500)
+
+    def _content_length(self, handler):
+        try:
+            content_length = int(handler.headers.get('Content-Length', 0))
+        except ValueError:
+            raise ValueError("Некорректная длина запроса")
+        if content_length <= 0:
+            raise ValueError("Пустой запрос")
+        return content_length
