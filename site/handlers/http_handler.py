@@ -1,25 +1,26 @@
-"""
-Основной HTTP обработчик
-"""
+"""Основной HTTP обработчик."""
 
 import http.server
-from pathlib import Path
 from utils.file_utils import serve_file, ensure_directories_exist
 from utils.response_utils import setup_cors_headers
 from api.person_api import PersonAPI
+from api.routes import parse_api_path
+from config.settings import load_settings
 
 
 class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
+    settings = load_settings()
+    person_api = None
+
+    @classmethod
+    def configure(cls, settings):
+        cls.settings = settings
+        data_dirs = ensure_directories_exist(settings.data_dir)
+        cls.person_api = PersonAPI(data_dirs, source_file=settings.source_file)
+
     def __init__(self, *args, **kwargs):
-        # Создаем директории для данных (в родительской директории)
-        self.data_dir = Path('..', 'person_data')
-        self.data_dir.mkdir(exist_ok=True)
-
-        # Создаем поддиректории и получаем их пути
-        self.data_dirs = ensure_directories_exist(self.data_dir)
-
-        # Инициализируем API
-        self.person_api = PersonAPI(self.data_dirs)
+        if self.__class__.person_api is None:
+            self.__class__.configure(self.__class__.settings)
 
         super().__init__(*args, **kwargs)
 
@@ -35,6 +36,13 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
         else:
             super().do_GET()
+
+    def do_HEAD(self):
+        if self._path_parts() == ["api", "health"]:
+            self.send_response(200)
+            self.end_headers()
+        else:
+            super().do_HEAD()
 
     def do_POST(self):
         if self.path.startswith('/api/'):
@@ -65,12 +73,17 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
+    def _path_parts(self):
+        return parse_api_path(self.path)
+
     def handle_api_get(self):
         """Обработка GET запросов к API"""
         try:
-            path_parts = self.path.split('/')
+            path_parts = self._path_parts()
 
-            if len(path_parts) >= 4 and path_parts[2] == 'person':
+            if path_parts == ["api", "health"]:
+                self.person_api.handle_health(self)
+            elif len(path_parts) >= 3 and path_parts[1] == 'person':
                 self.person_api.handle_get(self, path_parts)
             else:
                 self.send_error(404)
@@ -82,9 +95,9 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def handle_api_post(self):
         """Обработка POST запросов к API"""
         try:
-            path_parts = self.path.split('/')
+            path_parts = self._path_parts()
 
-            if len(path_parts) >= 5 and path_parts[2] == 'person':
+            if len(path_parts) >= 4 and path_parts[1] == 'person':
                 self.person_api.handle_post(self, path_parts)
             else:
                 self.send_error(404)
@@ -96,9 +109,9 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def handle_api_put(self):
         """Обработка PUT запросов к API"""
         try:
-            path_parts = self.path.split('/')
+            path_parts = self._path_parts()
 
-            if len(path_parts) >= 5 and path_parts[2] == 'person':
+            if len(path_parts) >= 4 and path_parts[1] == 'person':
                 self.person_api.handle_put(self, path_parts)
             else:
                 self.send_error(404)
@@ -110,9 +123,9 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def handle_api_patch(self):
         """Обработка PATCH запросов к API"""
         try:
-            path_parts = self.path.split('/')
+            path_parts = self._path_parts()
 
-            if len(path_parts) >= 5 and path_parts[2] == 'person':
+            if len(path_parts) >= 4 and path_parts[1] == 'person':
                 self.person_api.handle_patch(self, path_parts)
             else:
                 self.send_error(404)
@@ -124,9 +137,9 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def handle_api_delete(self):
         """Обработка DELETE запросов к API"""
         try:
-            path_parts = self.path.split('/')
+            path_parts = self._path_parts()
 
-            if len(path_parts) >= 6 and path_parts[2] == 'person':
+            if len(path_parts) >= 5 and path_parts[1] == 'person':
                 self.person_api.handle_delete(self, path_parts)
             else:
                 self.send_error(404)
@@ -138,8 +151,5 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         # Настройка CORS и других заголовков
         setup_cors_headers(self)
-
-        if self.path.endswith('.svg'):
-            self.send_header('Content-Type', 'image/svg+xml')
 
         super().end_headers()

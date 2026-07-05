@@ -1,27 +1,16 @@
-"""
-Сервис для работы с сообщениями
-"""
+"""Сервис для работы с сообщениями."""
 
-import json
-from pathlib import Path
+from storage.json_store import JsonListStore
 
 
 class MessageService:
     def __init__(self, messages_dir):
-        self.messages_dir = Path(messages_dir)
-        self.messages_dir.mkdir(exist_ok=True)
+        self.store = JsonListStore(messages_dir)
 
     def get_messages(self, person_id):
         """Получение сообщений чата персоны"""
-        messages_file = self.messages_dir / f"{person_id}.json"
-
-        if messages_file.exists():
-            with open(messages_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        return self.store.load(person_id)
 
     def save_messages(self, person_id, messages):
         """Сохранение сообщений чата персоны"""
-        messages_file = self.messages_dir / f"{person_id}.json"
-        with open(messages_file, 'w', encoding='utf-8') as f:
-            json.dump(messages, f, ensure_ascii=False, indent=2)
+        self.store.save(person_id, messages)

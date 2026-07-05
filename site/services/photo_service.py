@@ -1,75 +1,61 @@
-"""
-Сервис для работы с фотографиями
-"""
+"""Сервис для работы с фотографиями."""
 
-import json
-import uuid
 import os
-import re
+import uuid
+from email import policy
+from email.parser import BytesParser
 from pathlib import Path
 from utils.response_utils import get_current_timestamp
+from storage.json_store import JsonListStore, validate_record_id
 
 
 class PhotoService:
     def __init__(self, photos_dir):
         self.photos_dir = Path(photos_dir)
-        self.photos_dir.mkdir(exist_ok=True)
+        self.photos_dir.mkdir(parents=True, exist_ok=True)
+        self.store = JsonListStore(self.photos_dir)
 
     def get_photos(self, person_id):
         """Получение списка фотографий персоны"""
-        photos_file = self.photos_dir / f"{person_id}.json"
-
-        if photos_file.exists():
-            with open(photos_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        return self._load_photos_list(person_id)
 
     def upload_photo(self, person_id, post_data, boundary):
         """Загрузка фотографии"""
-        # Парсинг multipart данных
-        parts = post_data.split(f'--{boundary}'.encode())
+        safe_person_id = validate_record_id(person_id)
+        message = self._parse_multipart(post_data, boundary)
 
-        for part in parts:
-            if b'filename=' in part and b'Content-Type: image' in part:
-                # Извлечение имени файла
-                filename_match = re.search(rb'filename="([^"]*)"', part)
-                if not filename_match:
-                    continue
+        for part in message.iter_parts():
+            original_filename = part.get_filename()
+            content_type = part.get_content_type()
+            if not original_filename or not content_type.startswith("image/"):
+                continue
 
-                original_filename = filename_match.group(1).decode('utf-8')
+            file_data = part.get_payload(decode=True)
+            if not file_data:
+                raise ValueError("Пустой файл")
 
-                # Извлечение содержимого файла
-                file_start = part.find(b'\r\n\r\n') + 4
-                file_end = part.rfind(b'\r\n')
-                file_data = part[file_start:file_end]
+            original_filename = Path(original_filename).name
+            file_extension = os.path.splitext(original_filename)[1]
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
 
-                # Генерация уникального имени файла
-                file_extension = os.path.splitext(original_filename)[1]
-                unique_filename = f"{uuid.uuid4()}{file_extension}"
+            person_photos_dir = self.photos_dir / safe_person_id
+            person_photos_dir.mkdir(parents=True, exist_ok=True)
 
-                # Создание директории для фотографий персоны
-                person_photos_dir = self.photos_dir / person_id
-                person_photos_dir.mkdir(exist_ok=True)
+            file_path = person_photos_dir / unique_filename
+            file_path.write_bytes(file_data)
 
-                # Сохранение файла
-                file_path = person_photos_dir / unique_filename
-                with open(file_path, 'wb') as f:
-                    f.write(file_data)
+            photos = self._load_photos_list(safe_person_id)
+            new_photo = {
+                "url": f"/person_data/photos/{safe_person_id}/{unique_filename}",
+                "caption": original_filename,
+                "date": get_current_timestamp(),
+                "filename": unique_filename,
+            }
 
-                # Обновление списка фотографий
-                photos = self._load_photos_list(person_id)
+            photos.append(new_photo)
+            self._save_photos_list(safe_person_id, photos)
 
-                # Добавление новой фотографии
-                new_photo = {
-                    'url': f'/person_data/photos/{person_id}/{unique_filename}',
-                    'caption': original_filename,
-                    'date': get_current_timestamp(),
-                    'filename': unique_filename}
-
-                photos.append(new_photo)
-                self._save_photos_list(person_id, photos)
-
-                return new_photo
+            return new_photo
 
         raise ValueError("Файл не найден в запросе")
 
@@ -77,18 +63,16 @@ class PhotoService:
         """Удаление фотографии"""
         photos = self._load_photos_list(person_id)
 
-        if photo_index >= len(photos):
+        if photo_index < 0 or photo_index >= len(photos):
             raise IndexError("Фотография не найдена")
 
-        # Удаление файла фотографии
         photo_to_delete = photos[photo_index]
-        if 'filename' in photo_to_delete:
-            photo_path = self.photos_dir / \
-                person_id / photo_to_delete['filename']
+        if "filename" in photo_to_delete:
+            safe_person_id = validate_record_id(person_id)
+            photo_path = self.photos_dir / safe_person_id / Path(photo_to_delete["filename"]).name
             if photo_path.exists():
                 photo_path.unlink()
 
-        # Удаление из списка
         photos.pop(photo_index)
         self._save_photos_list(person_id, photos)
 
@@ -97,22 +81,18 @@ class PhotoService:
         photos = self._load_photos_list(person_id)
 
         if new_photos is not None:
-            # Прямое сохранение нового порядка
-            if len(new_photos) != len(photos):
+            if not isinstance(new_photos, list) or len(new_photos) != len(photos):
                 raise ValueError("Неверное количество фотографий")
             self._save_photos_list(person_id, new_photos)
             return new_photos
         elif new_order is not None:
-            # Переупорядочивание по индексам
             if not isinstance(new_order, list) or len(
                     new_order) != len(photos):
                 raise ValueError("Неверный порядок фотографий")
 
-            # Проверяем, что все индексы корректны
             if not all(0 <= idx < len(photos) for idx in new_order):
                 raise ValueError("Неверные индексы в порядке фотографий")
 
-            # Переупорядочиваем фотографии
             reordered_photos = [photos[idx] for idx in new_order]
             self._save_photos_list(person_id, reordered_photos)
             return reordered_photos
@@ -122,15 +102,18 @@ class PhotoService:
 
     def _load_photos_list(self, person_id):
         """Загрузка списка фотографий"""
-        photos_file = self.photos_dir / f"{person_id}.json"
-
-        if photos_file.exists():
-            with open(photos_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        return self.store.load(person_id)
 
     def _save_photos_list(self, person_id, photos):
         """Сохранение списка фотографий"""
-        photos_file = self.photos_dir / f"{person_id}.json"
-        with open(photos_file, 'w', encoding='utf-8') as f:
-            json.dump(photos, f, ensure_ascii=False, indent=2)
+        self.store.save(person_id, photos)
+
+    def _parse_multipart(self, post_data, boundary):
+        if not boundary:
+            raise ValueError("Не указан multipart boundary")
+
+        header = (
+            "Content-Type: multipart/form-data; "
+            f"boundary={boundary}\r\nMIME-Version: 1.0\r\n\r\n"
+        ).encode("utf-8")
+        return BytesParser(policy=policy.default).parsebytes(header + post_data)

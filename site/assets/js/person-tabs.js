@@ -53,7 +53,7 @@ class PersonTabs {
             return;
         }
 
-        // Деактивируем текущий таб
+        const previousTab = this.activeTab;
         const currentTab = this.tabs.get(this.activeTab);
         if (currentTab) {
             currentTab.button.classList.remove('active');
@@ -79,7 +79,7 @@ class PersonTabs {
             Utils.saveToLocalStorage('activePersonTab', tabName);
 
             // Уведомляем о смене таба
-            this.onTabChange(tabName);
+            this.onTabChange(tabName, previousTab);
         }
     }
 
@@ -145,12 +145,12 @@ class PersonTabs {
      * Обработчик смены таба
      * @param {string} tabName - имя нового активного таба
      */
-    onTabChange(tabName) {
+    onTabChange(tabName, previousTab) {
         // Можно добавить дополнительную логику при смене табов
 
         // Отправляем кастомное событие
         const event = new CustomEvent('tabChange', {
-            detail: { tabName, previousTab: this.activeTab }
+            detail: { tabName, previousTab }
         });
         document.dispatchEvent(event);
     }

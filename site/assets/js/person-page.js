@@ -12,7 +12,6 @@ class PersonPage {
      */
     async init() {
         try {
-            // Получаем ID персоны из URL
             this.personId = getPersonIdFromUrl();
 
             if (!this.personId) {
@@ -20,10 +19,8 @@ class PersonPage {
                 return;
             }
 
-            // Инициализируем компоненты
             this.tabs = new PersonTabs();
 
-            // Создаем глобальные объекты для управления сообщениями и фотографиями
             if (typeof PersonMessages !== 'undefined') {
                 window.personMessages = new PersonMessages();
             }
@@ -31,13 +28,10 @@ class PersonPage {
                 window.personPhotos = new PersonPhotos();
             }
 
-            // Загружаем основную информацию
             await this.loadPersonData();
 
-            // Восстанавливаем активный таб
             this.tabs.restoreActiveTab();
 
-            // Настраиваем обработчики событий
             this.setupEventListeners();
 
             this.isInitialized = true;
@@ -52,16 +46,11 @@ class PersonPage {
      */
     async loadPersonData() {
         try {
-            // Показываем индикаторы загрузки
             this.showLoadingState();
 
-            // Загружаем основную информацию
             this.personData = await personAPI.getPersonInfo(this.personId);
 
-            // Обновляем заголовок страницы
             this.updatePageHeader();
-
-            // Примечание: контент табов загружается через restoreActiveTab()
 
         } catch (error) {
             this.showError('Ошибка загрузки данных персоны');
@@ -106,12 +95,10 @@ class PersonPage {
             datesElement.textContent = displayDates;
         }
 
-        // Загрузка дополнительной информации в секцию details
         if (detailsElement) {
             this.loadPersonDetails(detailsElement);
         }
 
-        // Обновляем заголовок документа
         document.title = `${this.personData.name || 'Персона'} - Семейное дерево`;
     }
 
@@ -288,7 +275,6 @@ class PersonPage {
      * @param {KeyboardEvent} e - событие клавиатуры
      */
     handleKeyboardShortcuts(e) {
-        // Ctrl/Cmd + 1-4 для переключения табов
         if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '4') {
             e.preventDefault();
 
@@ -305,7 +291,6 @@ class PersonPage {
             }
         }
 
-        // Ctrl/Cmd + N для добавления нового элемента в активном табе
         if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
             e.preventDefault();
 
@@ -324,7 +309,6 @@ class PersonPage {
             }
         }
 
-        // Escape для закрытия модальных окон
         if (e.key === 'Escape') {
             const modal = document.getElementById('modal-overlay');
             if (modal && !modal.classList.contains('hidden')) {
@@ -406,16 +390,18 @@ class PersonPage {
      * Переход к другой персоне
      * @param {string} newPersonId - ID новой персоны
      */
-    navigateToSPerson(newPersonId) {
+    navigateToPerson(newPersonId) {
         if (newPersonId === this.personId) return;
 
-        // Обновляем URL без перезагрузки страницы
         const newUrl = `person.html?id=${newPersonId}`;
         window.history.pushState({ personId: newPersonId }, '', newUrl);
 
-        // Загружаем данные новой персоны
         this.personId = newPersonId;
         this.loadPersonData();
+    }
+
+    navigateToSPerson(newPersonId) {
+        this.navigateToPerson(newPersonId);
     }
 }
 
@@ -425,30 +411,6 @@ let personPage = null;
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Проверяем, было ли ФИО уже обновлено простым скриптом
-        const nameElement = document.getElementById('personName');
-        if (nameElement && nameElement.textContent !== 'Загрузка...') {
-            // Инициализируем только табы и функциональность
-            personPage = new PersonPage();
-            personPage.personId = getPersonIdFromUrl();
-            personPage.tabs = new PersonTabs();
-
-            // Создаем глобальные объекты для управления сообщениями и фотографиями
-            if (typeof PersonMessages !== 'undefined') {
-                window.personMessages = new PersonMessages();
-            }
-            if (typeof PersonPhotos !== 'undefined') {
-                window.personPhotos = new PersonPhotos();
-            }
-
-            // Восстанавливаем активный таб
-            personPage.tabs.restoreActiveTab();
-            personPage.setupEventListeners();
-            personPage.isInitialized = true;
-            return;
-        }
-
-        // Если ФИО не обновлено, запускаем полную инициализацию
         personPage = new PersonPage();
         await personPage.init();
     } catch (error) {
@@ -461,7 +423,7 @@ window.personPage = {
     instance: () => personPage,
     refresh: () => personPage?.refresh(),
     data: () => personPage?.getPersonData(),
-    navigateTo: (id) => personPage?.navigateToSPerson(id)
+    navigateTo: (id) => personPage?.navigateToPerson(id)
 };
 
 // Экспорт для использования в других модулях

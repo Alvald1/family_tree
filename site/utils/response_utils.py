@@ -27,7 +27,7 @@ def setup_cors_headers(handler):
     handler.send_header('Access-Control-Allow-Origin', '*')
     handler.send_header(
         'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS')
+        'GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS')
     handler.send_header('Access-Control-Allow-Headers', 'Content-Type')
     handler.send_header(
         'Cache-Control',

@@ -1,14 +1,13 @@
-"""
-Сервис для работы с информацией о персонах
-"""
+"""Сервис для работы с информацией о персонах."""
 
-import os
 import re
+from pathlib import Path
 
 
 class PersonService:
-    def __init__(self):
-        self.source_file = os.path.join('..', 'source.txt')
+    def __init__(self, source_file=None):
+        project_root = Path(__file__).resolve().parents[2]
+        self.source_file = Path(source_file) if source_file else project_root / "source.txt"
 
     def get_person_info(self, person_id):
         """Получение информации о персоне из source.txt"""
@@ -19,9 +18,8 @@ class PersonService:
             if person_id.startswith('node'):
                 numeric_id = person_id[4:]  # убираем "node"
 
-            if os.path.exists(self.source_file):
-                with open(self.source_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
+            if self.source_file.exists():
+                lines = self.source_file.read_text(encoding="utf-8").splitlines()
 
                 for line in lines:
                     line = line.strip()

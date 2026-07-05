@@ -12,12 +12,12 @@ class TreeViewer {
             throw new Error(`Container with ID "${containerId}" not found`);
         }
 
-        this.init();
+        this.ready = this.init();
     }
 
     init() {
         this.setupEventListeners();
-        this.loadSVG();
+        return this.loadSVG();
     }
 
     /**

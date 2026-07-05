@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Запуск сервера семейного дерева
-"""
+"""Запуск сервера семейного дерева."""
 
 import subprocess
 import sys
@@ -10,41 +8,21 @@ import os
 from pathlib import Path
 
 
-def load_config():
-    """Загружает конфигурацию из файла"""
-    try:
-        # Получаем путь к конфиг файлу
-        config_file = Path(__file__).parent / 'site' / \
-            'config' / 'site_config.py'
+SITE_DIR = Path(__file__).parent / "site"
+sys.path.insert(0, str(SITE_DIR))
 
-        if not config_file.exists():
-            print(f"⚠️  Конфиг файл не найден: {config_file}")
-            return "127.0.0.1", 8000
-
-        # Читаем конфиг как обычный Python файл
-        spec = {}
-        with open(config_file, 'r', encoding='utf-8') as f:
-            exec(f.read(), spec)
-
-        host = spec.get('host', '127.0.0.1')
-        port = spec.get('port', 8000)
-
-        return host, port
-
-    except Exception as e:
-        print(f"⚠️  Ошибка загрузки конфигурации: {e}")
-        return "127.0.0.1", 8000
+from config.settings import load_settings
 
 
-# Загружаем конфигурацию
-host, port = load_config()
+settings = load_settings(SITE_DIR)
+host, port = settings.host, settings.port
 
 
 def main():
     """Главная функция запуска"""
 
     # Переходим в папку сайта
-    site_dir = Path(__file__).parent / 'site'
+    site_dir = SITE_DIR
 
     if not site_dir.exists():
         print("❌ Папка 'site' не найдена!")

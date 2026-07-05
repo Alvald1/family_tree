@@ -1,6 +1,4 @@
-"""
-API обработчики для работы с персонами
-"""
+"""API обработчики для работы с персонами."""
 
 import json
 from utils.response_utils import send_json_response
@@ -11,23 +9,26 @@ from services.message_service import MessageService
 
 
 class PersonAPI:
-    def __init__(self, data_dirs):
-        self.person_service = PersonService()
+    def __init__(self, data_dirs, source_file=None):
+        self.person_service = PersonService(source_file=source_file)
         self.photo_service = PhotoService(data_dirs['photos'])
         self.blog_service = BlogService(data_dirs['blog'])
         self.message_service = MessageService(data_dirs['messages'])
 
+    def handle_health(self, handler):
+        send_json_response(handler, {"status": "ok"})
+
     def handle_get(self, handler, path_parts):
         """Обработка GET запросов"""
-        person_id = path_parts[3]
+        person_id = path_parts[2]
 
-        if len(path_parts) == 4:
+        if len(path_parts) == 3:
             # GET /api/person/{id} - информация о персоне
             person_info = self.person_service.get_person_info(person_id)
             send_json_response(handler, person_info)
 
-        elif len(path_parts) == 5:
-            resource = path_parts[4]
+        elif len(path_parts) == 4:
+            resource = path_parts[3]
             if resource == 'photos':
                 # GET /api/person/{id}/photos
                 photos = self.photo_service.get_photos(person_id)
@@ -47,8 +48,8 @@ class PersonAPI:
 
     def handle_post(self, handler, path_parts):
         """Обработка POST запросов"""
-        person_id = path_parts[3]
-        resource = path_parts[4]
+        person_id = path_parts[2]
+        resource = path_parts[3]
 
         if resource == 'photos':
             self._upload_photo(handler, person_id)
@@ -61,19 +62,19 @@ class PersonAPI:
 
     def handle_patch(self, handler, path_parts):
         """Обработка PATCH запросов"""
-        person_id = path_parts[3]
-        resource = path_parts[4]
+        person_id = path_parts[2]
+        resource = path_parts[3]
 
         if resource == 'photos' and len(
-                path_parts) == 6 and path_parts[5] == 'reorder':
+                path_parts) == 5 and path_parts[4] == 'reorder':
             self._reorder_photos(handler, person_id)
         else:
             handler.send_error(404)
 
     def handle_put(self, handler, path_parts):
         """Обработка PUT запросов"""
-        person_id = path_parts[3]
-        resource = path_parts[4]
+        person_id = path_parts[2]
+        resource = path_parts[3]
 
         if resource == 'messages':
             self._save_messages(handler, person_id)
@@ -82,9 +83,13 @@ class PersonAPI:
 
     def handle_delete(self, handler, path_parts):
         """Обработка DELETE запросов"""
-        person_id = path_parts[3]
-        resource = path_parts[4]
-        item_id = int(path_parts[5])
+        person_id = path_parts[2]
+        resource = path_parts[3]
+        try:
+            item_id = int(path_parts[4])
+        except ValueError:
+            handler.send_error(400, "Некорректный ID элемента")
+            return
 
         if resource == 'photos':
             try:

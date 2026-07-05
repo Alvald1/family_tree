@@ -30,7 +30,7 @@
 
         <div class="content">
             <div class="tabs">
-                <button class="tab-button active" data-tab="messages">� Сообщения</button>
+                <button class="tab-button active" data-tab="messages">Сообщения</button>
                 <button class="tab-button" data-tab="photos">📷 Фотографии</button>
             </div>
 
@@ -67,62 +67,6 @@
     </div>
 
     <!-- JavaScript files -->
-    <script>
-        // Получение ID из URL
-        function getPersonIdFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('id');
-        }
-
-        // Немедленное обновление ФИО и дат
-        async function updatePersonInfo() {
-            const personId = getPersonIdFromUrl();
-
-            if (!personId) {
-                console.error('No person ID found');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/person/${personId}`);
-                const data = await response.json();
-
-                // Обновляем все элементы синхронно
-                const nameElement = document.getElementById('personName');
-                const datesElement = document.getElementById('personDates');
-
-                // Используем requestAnimationFrame для синхронного обновления
-                requestAnimationFrame(() => {
-                    if (nameElement && data.name) {
-                        nameElement.textContent = data.name;
-                    }
-
-                    if (datesElement) {
-                        datesElement.textContent = data.dates || 'Даты не указаны';
-                    }
-
-                    // Обновляем заголовок документа
-                    document.title = `${data.name || 'Персона'} - Семейное дерево`;
-                });
-
-            } catch (error) {
-                console.error('Error loading person data:', error);
-                requestAnimationFrame(() => {
-                    const nameElement = document.getElementById('personName');
-                    const datesElement = document.getElementById('personDates');
-                    if (nameElement) {
-                        nameElement.textContent = 'Ошибка загрузки';
-                    }
-                    if (datesElement) {
-                        datesElement.textContent = 'Ошибка загрузки дат';
-                    }
-                });
-            }
-        }
-
-        // Запускаем сразу при загрузке DOM
-        document.addEventListener('DOMContentLoaded', updatePersonInfo);
-    </script>
     <script src="assets/js/config.js"></script>
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/person-api.js"></script>

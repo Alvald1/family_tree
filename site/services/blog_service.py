@@ -1,24 +1,15 @@
-"""
-Сервис для работы с блогами
-"""
+"""Сервис для работы с блогами."""
 
-import json
-from pathlib import Path
+from storage.json_store import JsonListStore
 
 
 class BlogService:
     def __init__(self, blog_dir):
-        self.blog_dir = Path(blog_dir)
-        self.blog_dir.mkdir(exist_ok=True)
+        self.store = JsonListStore(blog_dir)
 
     def get_posts(self, person_id):
         """Получение записей блога персоны"""
-        blog_file = self.blog_dir / f"{person_id}.json"
-
-        if blog_file.exists():
-            with open(blog_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        return self.store.load(person_id)
 
     def add_post(self, person_id, post_info):
         """Добавление записи в блог"""
@@ -42,15 +33,8 @@ class BlogService:
 
     def _load_posts(self, person_id):
         """Загрузка записей блога"""
-        blog_file = self.blog_dir / f"{person_id}.json"
-
-        if blog_file.exists():
-            with open(blog_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        return self.store.load(person_id)
 
     def _save_posts(self, person_id, posts):
         """Сохранение записей блога"""
-        blog_file = self.blog_dir / f"{person_id}.json"
-        with open(blog_file, 'w', encoding='utf-8') as f:
-            json.dump(posts, f, ensure_ascii=False, indent=2)
+        self.store.save(person_id, posts)

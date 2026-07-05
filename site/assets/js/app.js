@@ -14,8 +14,8 @@ class FamilyTreeApp {
             // Проверяем поддержку необходимых API
             this.checkBrowserSupport();
 
-            // Инициализируем компоненты
             this.treeViewer = new TreeViewer('svgContainer');
+            await this.treeViewer.ready;
             this.interactions = new TreeInteractions(this.treeViewer);
 
             // Подписываемся на события
@@ -115,6 +115,7 @@ class FamilyTreeApp {
 
         try {
             await this.treeViewer.loadSVG();
+            this.interactions = new TreeInteractions(this.treeViewer);
         } catch (error) {
             // Ошибка перезагрузки
         }

@@ -36,7 +36,7 @@ class PersonAPI {
         try {
             const response = await Utils.fetchWithCache(`${this.baseUrl}/person/${personId}/messages`);
             const data = await response.json();
-            return data.messages || [];
+            return this.toArray(data, 'messages');
         } catch (error) {
             console.error('Error fetching messages:', error);
 
@@ -54,7 +54,7 @@ class PersonAPI {
         try {
             const response = await Utils.fetchWithCache(`${this.baseUrl}/person/${personId}/photos`);
             const data = await response.json();
-            return data.photos || [];
+            return this.toArray(data, 'photos');
         } catch (error) {
             console.error('Error fetching photos:', error);
 
@@ -72,7 +72,7 @@ class PersonAPI {
         try {
             const response = await Utils.fetchWithCache(`${this.baseUrl}/person/${personId}/blog`);
             const data = await response.json();
-            return data.posts || [];
+            return this.toArray(data, 'posts');
         } catch (error) {
             console.error('Error fetching blog posts:', error);
             return [];
@@ -230,7 +230,7 @@ class PersonAPI {
         try {
             const response = await Utils.fetchWithCache(`person_data/messages/${personId}.json`);
             const data = await response.json();
-            return data.messages || [];
+            return this.toArray(data, 'messages');
         } catch (error) {
             console.warn('No local messages found for person:', personId);
             return [];
@@ -248,7 +248,7 @@ class PersonAPI {
             const data = await response.json();
 
             // Преобразуем относительные пути в абсолютные
-            const photos = data.photos || [];
+            const photos = this.toArray(data, 'photos');
             return photos.map(photo => ({
                 ...photo,
                 url: photo.url.startsWith('http') ? photo.url : `person_data/photos/${photo.url}`
@@ -289,6 +289,22 @@ class PersonAPI {
         } catch (error) {
             return false;
         }
+    }
+
+    /**
+     * Нормализация старого и нового формата API-ответов.
+     * Сервер отдаёт массивы напрямую, а ранний клиент местами ожидал объект.
+     */
+    toArray(payload, key) {
+        if (Array.isArray(payload)) {
+            return payload;
+        }
+
+        if (payload && Array.isArray(payload[key])) {
+            return payload[key];
+        }
+
+        return [];
     }
 }
 
