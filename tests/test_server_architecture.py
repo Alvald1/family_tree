@@ -182,6 +182,7 @@ class YandexIDAuthTest(unittest.TestCase):
 
         self.assertTrue(auth.is_public_path("/api/health"))
         self.assertTrue(auth.is_public_path("/auth/login"))
+        self.assertTrue(auth.is_public_path("/auth/logged-out"))
         self.assertFalse(auth.is_public_path("/api/person/node7"))
 
     def test_write_access_requires_editor_or_admin(self):
@@ -277,6 +278,13 @@ class LogoutButtonTest(unittest.TestCase):
                 self.assertIn("Выйти", html)
                 self.assertIn("logout-button", html)
 
+    def test_main_pages_use_versioned_stylesheets_for_logout_button(self):
+        for page in ("index.html", "person.html"):
+            with self.subTest(page=page):
+                html = (SITE_ROOT / page).read_text(encoding="utf-8")
+
+                self.assertIn('assets/css/main.css?v=', html)
+
 
 class AuthGuardTest(unittest.TestCase):
     def make_handler(self, path, cookie=None):
@@ -338,13 +346,13 @@ class AuthGuardTest(unittest.TestCase):
 
         self.assertTrue(PersonalDataHandler._require_auth(handler))
 
-    def test_logout_expires_session_cookie_and_redirects_to_login(self):
+    def test_logout_expires_session_cookie_and_redirects_to_logged_out_page(self):
         handler, _ = self.make_handler("/auth/logout")
 
         PersonalDataHandler.handle_auth_logout(handler)
 
         self.assertEqual(handler.responses, [302])
-        self.assertIn(("Location", "/auth/login"), handler.sent_headers)
+        self.assertIn(("Location", "/auth/logged-out"), handler.sent_headers)
         self.assertTrue(
             any(
                 name == "Set-Cookie"
@@ -353,6 +361,24 @@ class AuthGuardTest(unittest.TestCase):
                 for name, value in handler.sent_headers
             )
         )
+
+    def test_logged_out_page_is_rendered_without_starting_oauth(self):
+        handler, _ = self.make_handler("/auth/logged-out")
+        written = []
+
+        class FakeWriter:
+            def write(self, data):
+                written.append(data)
+
+        handler.wfile = FakeWriter()
+
+        PersonalDataHandler.handle_auth_logged_out(handler)
+
+        body = b"".join(written).decode("utf-8")
+        self.assertEqual(handler.responses, [200])
+        self.assertIn(("Content-Type", "text/html; charset=utf-8"), handler.sent_headers)
+        self.assertIn("Вы вышли из аккаунта", body)
+        self.assertIn('href="/auth/login"', body)
 
     def test_write_request_requires_editor_session(self):
         handler, auth = self.make_handler("/api/person/node7/messages")

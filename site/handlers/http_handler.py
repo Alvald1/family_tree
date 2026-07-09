@@ -225,6 +225,8 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_auth_callback()
         elif path == "/auth/logout":
             self.handle_auth_logout()
+        elif path == "/auth/logged-out":
+            self.handle_auth_logged_out()
         else:
             self.send_error(404)
 
@@ -272,8 +274,33 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     def handle_auth_logout(self):
         self.send_response(302)
         self.send_header("Set-Cookie", self.auth.expired_session_cookie())
-        self.send_header("Location", "/auth/login")
+        self.send_header("Location", "/auth/logged-out")
         self.end_headers()
+
+    def handle_auth_logged_out(self):
+        body = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выход из аккаунта</title>
+    <link rel="stylesheet" href="/assets/css/main.css?v=logout-20260709-2">
+</head>
+<body class="auth-status-page">
+    <main class="auth-status-card">
+        <h1>Вы вышли из аккаунта</h1>
+        <p>Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID снова.</p>
+        <a class="btn" href="/auth/login">Войти</a>
+    </main>
+</body>
+</html>
+"""
+        encoded = body.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
 
     def handle_api_get(self):
         """Обработка GET запросов к API"""

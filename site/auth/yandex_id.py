@@ -105,6 +105,7 @@ class YandexIDAuth:
             "/auth/login",
             "/auth/callback",
             "/auth/logout",
+            "/auth/logged-out",
         }
 
     def create_session_value(self, login, now=None):

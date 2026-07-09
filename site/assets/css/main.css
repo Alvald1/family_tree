@@ -49,30 +49,63 @@ h1 {
     opacity: 0.8;
 }
 
-.logout-button {
+.header>.logout-button {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 18px;
+    right: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 38px;
-    padding: 8px 16px;
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.22);
-    border-radius: 8px;
-    color: #5a5fd8;
+    min-width: 84px;
+    min-height: 40px;
+    padding: 9px 18px;
+    background: #5d63d8;
+    border: 1px solid rgba(93, 99, 216, 0.2);
+    border-radius: 999px;
+    box-shadow: 0 6px 16px rgba(93, 99, 216, 0.22);
+    color: white;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
     text-decoration: none;
     transition: all 0.2s ease;
 }
 
-.logout-button:hover {
-    background: rgba(102, 126, 234, 0.18);
-    color: #4d55c9;
+.header>.logout-button:hover,
+.header>.logout-button:focus {
+    background: #4d55c9;
+    color: white;
+    outline: none;
     transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(77, 85, 201, 0.28);
+}
+
+.auth-status-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.auth-status-card {
+    width: min(460px, 100%);
+    padding: 32px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 16px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+
+.auth-status-card h1 {
+    margin-bottom: 14px;
+    font-size: 2em;
+}
+
+.auth-status-card p {
+    margin: 0 0 24px;
+    color: #666;
+    line-height: 1.5;
 }
 
 .loading {
@@ -226,9 +259,10 @@ h1 {
         font-size: 2em;
     }
 
-    .logout-button {
+    .header>.logout-button {
         top: 14px;
         right: 14px;
+        min-width: 76px;
         min-height: 34px;
         padding: 8px 14px;
         font-size: 13px;

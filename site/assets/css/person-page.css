@@ -40,18 +40,18 @@
     color: white;
 }
 
-.logout-button {
+.header>.logout-button {
     top: 30px;
     right: 30px;
-    background: rgba(255, 255, 255, 0.2);
-    border-color: transparent;
-    border-radius: 25px;
-    color: white;
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #5a5fd8;
 }
 
-.logout-button:hover {
-    background: rgba(255, 255, 255, 0.3);
-    color: white;
+.header>.logout-button:hover,
+.header>.logout-button:focus {
+    background: white;
+    color: #4d55c9;
 }
 
 .person-name {
@@ -552,7 +552,7 @@
         font-size: 13px;
     }
 
-    .logout-button {
+    .header>.logout-button {
         top: 20px;
         right: 20px;
         min-height: 34px;
