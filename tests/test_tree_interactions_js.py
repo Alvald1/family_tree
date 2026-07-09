@@ -111,6 +111,12 @@ class TreeInteractionsZoomTest(unittest.TestCase):
               getAttribute(name) {
                 return name === 'id' ? 'node7' : null;
               },
+              querySelector(selector) {
+                if (selector === 'title') {
+                  return { textContent: '7' };
+                }
+                return null;
+              },
               querySelectorAll() {
                 return [];
               },
@@ -136,6 +142,108 @@ class TreeInteractionsZoomTest(unittest.TestCase):
             }
             if (!listeners.contextmenu) {
               throw new Error('right click should open person context menu');
+            }
+            """
+        )
+
+        self.run_node(script)
+
+    def test_person_id_comes_from_graphviz_title_not_svg_group_id(self):
+        script = textwrap.dedent(
+            """
+            const TreeViewer = require('./site/assets/js/tree-viewer.js');
+
+            const node = {
+              getAttribute(name) {
+                return name === 'id' ? 'node9' : null;
+              },
+              querySelector(selector) {
+                if (selector === 'title') {
+                  return { textContent: '7' };
+                }
+                return null;
+              },
+            };
+
+            const personId = TreeViewer.getPersonIdFromNode(node);
+
+            if (personId !== 'node7') {
+              throw new Error(`expected person id node7 from title, got ${personId}`);
+            }
+            """
+        )
+
+        self.run_node(script)
+
+    def test_non_numeric_graphviz_title_is_not_person_node(self):
+        script = textwrap.dedent(
+            """
+            const TreeViewer = require('./site/assets/js/tree-viewer.js');
+
+            const marriageNode = {
+              getAttribute(name) {
+                return name === 'id' ? 'node151' : null;
+              },
+              querySelector(selector) {
+                if (selector === 'title') {
+                  return { textContent: 'marriage_3' };
+                }
+                return null;
+              },
+            };
+
+            const personId = TreeViewer.getPersonIdFromNode(marriageNode);
+
+            if (personId !== null) {
+              throw new Error(`marriage node should not be treated as a person: ${personId}`);
+            }
+            """
+        )
+
+        self.run_node(script)
+
+    def test_context_menu_uses_person_id_from_graphviz_title(self):
+        script = textwrap.dedent(
+            """
+            const TreeViewer = require('./site/assets/js/tree-viewer.js');
+            const viewer = Object.create(TreeViewer.prototype);
+            const node = {
+              getAttribute(name) {
+                return name === 'id' ? 'node9' : null;
+              },
+              querySelector(selector) {
+                if (selector === 'title') {
+                  return { textContent: '7' };
+                }
+                return null;
+              },
+            };
+
+            viewer.showPersonContextMenu = (personId, clientX, clientY) => {
+              viewer.openedMenu = { personId, clientX, clientY };
+            };
+
+            viewer.handleNodeContextMenu({
+              target: {
+                closest(selector) {
+                  return selector === 'g.node' ? node : null;
+                },
+              },
+              clientX: 100,
+              clientY: 200,
+              preventDefault() {
+                viewer.prevented = true;
+              },
+              stopPropagation() {
+                viewer.stopped = true;
+              },
+            });
+
+            if (!viewer.prevented || !viewer.stopped) {
+              throw new Error('person context menu event should be captured');
+            }
+            if (!viewer.openedMenu || viewer.openedMenu.personId !== 'node7') {
+              throw new Error(`expected menu for node7, got ${JSON.stringify(viewer.openedMenu)}`);
             }
             """
         )

@@ -701,6 +701,8 @@ class FamilyTreeBuilder:
             with open(svg_filename, 'r', encoding='utf-8') as f:
                 content = f.read()
 
+            content = self.normalize_svg_node_ids(content)
+
             # Ищем polygon с границами содержимого
             polygon_match = re.search(
                 r'<polygon[^>]*points="([^"]+)"', content)
@@ -752,3 +754,42 @@ class FamilyTreeBuilder:
 
         except Exception as e:
             print(f"⚠️  Ошибка при исправлении SVG: {e}")
+
+    @staticmethod
+    def normalize_svg_node_ids(content: str) -> str:
+        """Replaces Graphviz-generated SVG group IDs with DOT node names.
+
+        Graphviz emits internal IDs like ``node9`` and stores the original DOT
+        node name in the nested ``title`` tag. The site uses IDs for profile
+        navigation, so keep the SVG group ID aligned with the source person ID.
+        """
+        replacements = {}
+
+        def normalize_group(match):
+            old_id = match.group("id")
+            title = match.group("title").strip()
+            if re.fullmatch(r"\d+", title):
+                new_id = f"node{title}"
+            elif re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", title):
+                new_id = title
+            else:
+                return match.group(0)
+
+            replacements[old_id] = new_id
+            return match.group(0).replace(
+                f'id="{old_id}"',
+                f'id="{new_id}"',
+                1,
+            )
+
+        content = re.sub(
+            r'<g id="(?P<id>node\d+)" class="node">\s*<title>(?P<title>[^<]+)</title>',
+            normalize_group,
+            content,
+        )
+
+        for old_id, new_id in replacements.items():
+            content = content.replace(f'="#{old_id}"', f'="#{new_id}"')
+            content = content.replace(f'url(#{old_id})', f'url(#{new_id})')
+
+        return content

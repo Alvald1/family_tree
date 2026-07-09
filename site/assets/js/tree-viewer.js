@@ -103,7 +103,7 @@ class TreeViewer {
      * Добавление обработчиков кликов на персон
      */
     addPersonClickHandlers() {
-        const personNodes = this.svg.querySelectorAll('g.node:not([id*="marriage"])');
+        const graphNodes = this.svg.querySelectorAll('g.node');
 
         // Используем делегирование событий вместо отдельных обработчиков для каждого узла
         this.svg.addEventListener('mouseenter', this.handleNodeMouseEnter.bind(this), true);
@@ -115,20 +115,39 @@ class TreeViewer {
         }
 
         // Добавляем только стили и тултипы для узлов
-        personNodes.forEach(node => {
-            const nodeId = node.getAttribute('id');
-            if (nodeId && !nodeId.includes('marriage')) {
-                this.setupPersonNodeStyles(node, nodeId);
+        graphNodes.forEach(node => {
+            if (TreeViewer.getPersonIdFromNode(node)) {
+                this.setupPersonNodeStyles(node);
             }
         });
+    }
+
+    static getPersonIdFromNode(node) {
+        if (!node) return null;
+
+        const title = node.querySelector ? node.querySelector('title') : null;
+        const graphNodeId = title?.textContent?.trim();
+        if (!graphNodeId || !/^\d+$/.test(graphNodeId)) {
+            return null;
+        }
+
+        return `node${graphNodeId}`;
+    }
+
+    findPersonNode(target) {
+        const node = target?.closest ? target.closest('g.node') : null;
+        if (!TreeViewer.getPersonIdFromNode(node)) {
+            return null;
+        }
+        return node;
     }
 
     /**
      * Обработчик входа мыши в узел
      */
     handleNodeMouseEnter(e) {
-        const node = e.target.closest('g.node:not([id*="marriage"])');
-        if (node && node.getAttribute('id') && !node.getAttribute('id').includes('marriage')) {
+        const node = this.findPersonNode(e.target);
+        if (node) {
             node.style.filter = 'drop-shadow(0 0 10px rgba(102, 126, 234, 0.6))';
             this.addNodeHighlight(node);
         }
@@ -138,8 +157,8 @@ class TreeViewer {
      * Обработчик выхода мыши из узла
      */
     handleNodeMouseLeave(e) {
-        const node = e.target.closest('g.node:not([id*="marriage"])');
-        if (node && node.getAttribute('id') && !node.getAttribute('id').includes('marriage')) {
+        const node = this.findPersonNode(e.target);
+        if (node) {
             node.style.filter = 'none';
             this.removeNodeHighlight(node);
         }
@@ -149,12 +168,12 @@ class TreeViewer {
      * Обработчик контекстного меню персоны
      */
     handleNodeContextMenu(e) {
-        const node = e.target.closest('g.node:not([id*="marriage"])');
-        if (node && node.getAttribute('id') && !node.getAttribute('id').includes('marriage')) {
+        const node = this.findPersonNode(e.target);
+        if (node) {
             e.preventDefault();
             e.stopPropagation();
-            const nodeId = node.getAttribute('id');
-            this.showPersonContextMenu(nodeId, e.clientX, e.clientY);
+            const personId = TreeViewer.getPersonIdFromNode(node);
+            this.showPersonContextMenu(personId, e.clientX, e.clientY);
         }
     }
 
@@ -235,7 +254,7 @@ class TreeViewer {
     /**
      * Настройка стилей узла персоны
      */
-    setupPersonNodeStyles(node, nodeId) {
+    setupPersonNodeStyles(node) {
         // Стили для интерактивности
         node.style.cursor = 'pointer';
         node.style.transition = 'filter 0.2s ease';

@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TREE_GEN_ROOT = PROJECT_ROOT / "tree_gen"
 sys.path.insert(0, str(TREE_GEN_ROOT))
 
+from family_tree_builder import FamilyTreeBuilder
 from gedcom_tree_builder import GedcomTreeBuilder
 
 
@@ -77,6 +78,31 @@ class GedcomTreeBuilderTest(unittest.TestCase):
         self.assertEqual(builder.people[10], "One Parent")
         self.assertEqual(builder.people[11], "One Child")
         self.assertEqual(builder.single_parent_children, [(10, 11)])
+
+    def test_svg_node_ids_are_normalized_to_graph_titles(self):
+        svg = "\n".join([
+            '<svg>',
+            '<g id="node9" class="node">',
+            '<title>7</title>',
+            '<text>Person</text>',
+            '</g>',
+            '<g id="node151" class="node">',
+            '<title>marriage_3</title>',
+            '<text>♥</text>',
+            '</g>',
+            '<a xlink:href="#node9"/>',
+            '<a xlink:href="#node151"/>',
+            '</svg>',
+        ])
+
+        normalized = FamilyTreeBuilder.normalize_svg_node_ids(svg)
+
+        self.assertIn('<g id="node7" class="node">', normalized)
+        self.assertIn('<g id="marriage_3" class="node">', normalized)
+        self.assertIn('xlink:href="#node7"', normalized)
+        self.assertIn('xlink:href="#marriage_3"', normalized)
+        self.assertNotIn('id="node9"', normalized)
+        self.assertNotIn('id="node151"', normalized)
 
 
 if __name__ == "__main__":
