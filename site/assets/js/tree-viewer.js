@@ -7,6 +7,9 @@ class TreeViewer {
         this.translateX = 0;
         this.translateY = 0;
         this.viewState = null;
+        this.personContextMenu = null;
+        this.handleDocumentClick = this.handleDocumentClick.bind(this);
+        this.handleDocumentKeyDown = this.handleDocumentKeyDown.bind(this);
 
         if (!this.container) {
             throw new Error(`Container with ID "${containerId}" not found`);
@@ -105,7 +108,11 @@ class TreeViewer {
         // Используем делегирование событий вместо отдельных обработчиков для каждого узла
         this.svg.addEventListener('mouseenter', this.handleNodeMouseEnter.bind(this), true);
         this.svg.addEventListener('mouseleave', this.handleNodeMouseLeave.bind(this), true);
-        this.svg.addEventListener('dblclick', this.handleNodeDoubleClick.bind(this));
+        this.svg.addEventListener('contextmenu', this.handleNodeContextMenu.bind(this));
+        if (document.addEventListener) {
+            document.addEventListener('click', this.handleDocumentClick);
+            document.addEventListener('keydown', this.handleDocumentKeyDown);
+        }
 
         // Добавляем только стили и тултипы для узлов
         personNodes.forEach(node => {
@@ -139,15 +146,89 @@ class TreeViewer {
     }
 
     /**
-     * Обработчик двойного клика
+     * Обработчик контекстного меню персоны
      */
-    handleNodeDoubleClick(e) {
+    handleNodeContextMenu(e) {
         const node = e.target.closest('g.node:not([id*="marriage"])');
         if (node && node.getAttribute('id') && !node.getAttribute('id').includes('marriage')) {
             e.preventDefault();
             e.stopPropagation();
             const nodeId = node.getAttribute('id');
-            this.openPersonPage(nodeId);
+            this.showPersonContextMenu(nodeId, e.clientX, e.clientY);
+        }
+    }
+
+    /**
+     * Показ меню действий для персоны
+     */
+    showPersonContextMenu(personId, clientX, clientY) {
+        this.hidePersonContextMenu();
+
+        const menu = Utils.createElement('div', {
+            className: 'person-context-menu',
+            role: 'menu'
+        });
+        const openProfileButton = Utils.createElement('button', {
+            className: 'person-context-menu__item',
+            type: 'button',
+            role: 'menuitem'
+        }, AppConfig.messages.openPersonProfile || 'Открыть профиль');
+
+        openProfileButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hidePersonContextMenu();
+            this.openPersonPage(personId);
+        });
+
+        menu.appendChild(openProfileButton);
+        this.container.appendChild(menu);
+        this.personContextMenu = menu;
+        this.positionPersonContextMenu(menu, clientX, clientY);
+    }
+
+    /**
+     * Позиционирование меню рядом с курсором в пределах контейнера
+     */
+    positionPersonContextMenu(menu, clientX, clientY) {
+        const rect = this.container.getBoundingClientRect();
+        const padding = 8;
+        const menuWidth = menu.offsetWidth || 160;
+        const menuHeight = menu.offsetHeight || 44;
+        const maxLeft = Math.max(padding, rect.width - menuWidth - padding);
+        const maxTop = Math.max(padding, rect.height - menuHeight - padding);
+        const left = Utils.clamp(clientX - rect.left, padding, maxLeft);
+        const top = Utils.clamp(clientY - rect.top, padding, maxTop);
+
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+    }
+
+    /**
+     * Закрытие меню действий для персоны
+     */
+    hidePersonContextMenu() {
+        if (this.personContextMenu) {
+            this.personContextMenu.remove();
+            this.personContextMenu = null;
+        }
+    }
+
+    /**
+     * Закрытие меню по клику вне него
+     */
+    handleDocumentClick(e) {
+        if (this.personContextMenu && !this.personContextMenu.contains(e.target)) {
+            this.hidePersonContextMenu();
+        }
+    }
+
+    /**
+     * Закрытие меню по Escape
+     */
+    handleDocumentKeyDown(e) {
+        if (e.key === 'Escape') {
+            this.hidePersonContextMenu();
         }
     }
 
