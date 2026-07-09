@@ -202,6 +202,13 @@ class YandexIDAuthTest(unittest.TestCase):
             authorization_url,
         )
 
+    def test_authorization_url_can_force_account_selection(self):
+        auth = self.auth()
+
+        authorization_url = auth.authorization_url("state-value", force_confirm=True)
+
+        self.assertIn("force_confirm=yes", authorization_url)
+
     def test_token_exchange_uses_yandex_ru_oauth_endpoint(self):
         auth = self.auth()
         captured_request = None
@@ -333,6 +340,17 @@ class AuthGuardTest(unittest.TestCase):
             handler.sent_headers,
         )
 
+    def test_force_confirm_login_redirects_to_yandex_account_selection(self):
+        handler, _ = self.make_handler("/auth/login?force_confirm=yes")
+
+        PersonalDataHandler.handle_auth_login(handler)
+
+        self.assertEqual(handler.responses, [302])
+        locations = [value for name, value in handler.sent_headers if name == "Location"]
+        self.assertEqual(len(locations), 1)
+        self.assertIn("https://oauth.yandex.ru/authorize?", locations[0])
+        self.assertIn("force_confirm=yes", locations[0])
+
     def test_protected_page_allows_valid_session(self):
         handler, auth = self.make_handler("/person.html?id=node7")
         handler.headers["Cookie"] = (
@@ -396,8 +414,8 @@ class AuthGuardTest(unittest.TestCase):
         self.assertEqual(handler.responses, [200])
         self.assertIn("Доступа нет", body)
         self.assertIn("не добавлен в список доступа", body)
-        self.assertIn("https://passport.yandex.ru/passport?mode=logout", body)
-        self.assertIn("retpath=https%3A%2F%2Fdrevo.gribovka.ru%2Fauth%2Flogin", body)
+        self.assertIn('href="/auth/login?force_confirm=yes"', body)
+        self.assertNotIn("passport.yandex.ru", body)
         self.assertNotIn('href="/auth/login">Войти другим аккаунтом</a>', body)
 
     def test_disallowed_yandex_login_redirects_to_access_denied_logout_page(self):

@@ -151,16 +151,17 @@ class YandexIDAuth:
             now=now,
         )
 
-    def authorization_url(self, state):
-        query = urllib.parse.urlencode(
-            {
-                "response_type": "code",
-                "client_id": self.config.client_id,
-                "redirect_uri": self.config.redirect_uri,
-                "scope": "login:info login:email",
-                "state": state,
-            }
-        )
+    def authorization_url(self, state, force_confirm=False):
+        params = {
+            "response_type": "code",
+            "client_id": self.config.client_id,
+            "redirect_uri": self.config.redirect_uri,
+            "scope": "login:info login:email",
+            "state": state,
+        }
+        if force_confirm:
+            params["force_confirm"] = "yes"
+        query = urllib.parse.urlencode(params)
         return f"{AUTHORIZE_URL}?{query}"
 
     def exchange_code(self, code):
