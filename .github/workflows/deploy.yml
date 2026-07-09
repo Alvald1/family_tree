@@ -115,5 +115,8 @@ jobs:
           set -euo pipefail
           cd /home/user/family_tree
           git pull --ff-only
+          sudo chown -R 10001:10001 /home/user/family_tree_data/person_data
+          sudo find /home/user/family_tree_data/person_data -type d -exec chmod 755 {} +
+          sudo find /home/user/family_tree_data/person_data -type f -exec chmod 644 {} +
           sudo docker compose up -d --build
           sudo docker compose ps
