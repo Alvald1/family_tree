@@ -267,6 +267,17 @@ class ResponseHeadersTest(unittest.TestCase):
         self.assertNotIn(("Access-Control-Allow-Origin", "*"), handler.headers)
 
 
+class LogoutButtonTest(unittest.TestCase):
+    def test_main_pages_link_to_yandex_logout(self):
+        for page in ("index.html", "person.html"):
+            with self.subTest(page=page):
+                html = (SITE_ROOT / page).read_text(encoding="utf-8")
+
+                self.assertIn('href="/auth/logout"', html)
+                self.assertIn("Выйти", html)
+                self.assertIn("logout-button", html)
+
+
 class AuthGuardTest(unittest.TestCase):
     def make_handler(self, path, cookie=None):
         auth = YandexIDAuth(
@@ -326,6 +337,22 @@ class AuthGuardTest(unittest.TestCase):
         handler, _ = self.make_handler("/api/health")
 
         self.assertTrue(PersonalDataHandler._require_auth(handler))
+
+    def test_logout_expires_session_cookie_and_redirects_to_login(self):
+        handler, _ = self.make_handler("/auth/logout")
+
+        PersonalDataHandler.handle_auth_logout(handler)
+
+        self.assertEqual(handler.responses, [302])
+        self.assertIn(("Location", "/auth/login"), handler.sent_headers)
+        self.assertTrue(
+            any(
+                name == "Set-Cookie"
+                and "family_tree_session=" in value
+                and "Max-Age=0" in value
+                for name, value in handler.sent_headers
+            )
+        )
 
     def test_write_request_requires_editor_session(self):
         handler, auth = self.make_handler("/api/person/node7/messages")

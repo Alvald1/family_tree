@@ -40,6 +40,20 @@
     color: white;
 }
 
+.logout-button {
+    top: 30px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: transparent;
+    border-radius: 25px;
+    color: white;
+}
+
+.logout-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
 .person-name {
     font-size: 2.5em;
     margin: 0;
@@ -534,6 +548,14 @@
     .back-button {
         left: 20px;
         top: 20px;
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+
+    .logout-button {
+        top: 20px;
+        right: 20px;
+        min-height: 34px;
         padding: 8px 15px;
         font-size: 13px;
     }
