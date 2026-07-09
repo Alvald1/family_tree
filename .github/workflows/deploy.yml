@@ -62,12 +62,12 @@ jobs:
           FAMILY_TREE_S3_BUCKET: s3-gribovka
           FAMILY_TREE_S3_ENDPOINT_URL: https://storage.yandexcloud.net
           FAMILY_TREE_S3_REGION: ru-central1
-          YANDEX_ADMIN_LOGINS: ${{ secrets.YANDEX_ADMIN_LOGINS }}
-          YANDEX_ALLOWED_LOGINS: ${{ secrets.YANDEX_ALLOWED_LOGINS }}
+          YANDEX_ADMIN_LOGINS: ${{ vars.YANDEX_ADMIN_LOGINS }}
+          YANDEX_ALLOWED_LOGINS: ${{ vars.YANDEX_ALLOWED_LOGINS }}
           YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
           YANDEX_CLIENT_SECRET: ${{ secrets.YANDEX_CLIENT_SECRET }}
-          YANDEX_EDITOR_LOGINS: ${{ secrets.YANDEX_EDITOR_LOGINS }}
-          YANDEX_REDIRECT_URI: ${{ secrets.YANDEX_REDIRECT_URI }}
+          YANDEX_EDITOR_LOGINS: ${{ vars.YANDEX_EDITOR_LOGINS }}
+          YANDEX_REDIRECT_URI: ${{ vars.YANDEX_REDIRECT_URI }}
         run: |
           set -euo pipefail
           python3 - <<'PY' > /home/user/family_tree/.env.tmp
@@ -102,7 +102,7 @@ jobs:
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
               raise ValueError(
-                  "Required production secrets are missing: " + ", ".join(missing)
+                  "Required production environment values are missing: " + ", ".join(missing)
               )
           for name in names:
               value = os.environ.get(name, "")
