@@ -294,10 +294,10 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         message = (
             "Ваш Yandex-логин не добавлен в список доступа к семейному дереву."
             if access_denied
-            else "Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID снова."
+            else "Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID и выберите нужный аккаунт."
         )
-        button_text = "Войти другим аккаунтом" if access_denied else "Войти"
-        login_url = "/auth/login?force_confirm=yes" if access_denied else "/auth/login"
+        button_text = "Войти другим аккаунтом" if access_denied else "Войти / выбрать аккаунт"
+        login_url = "/auth/login?force_confirm=yes"
         body = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>

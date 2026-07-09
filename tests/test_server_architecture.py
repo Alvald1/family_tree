@@ -396,7 +396,9 @@ class AuthGuardTest(unittest.TestCase):
         self.assertEqual(handler.responses, [200])
         self.assertIn(("Content-Type", "text/html; charset=utf-8"), handler.sent_headers)
         self.assertIn("Вы вышли из аккаунта", body)
-        self.assertIn('href="/auth/login"', body)
+        self.assertIn("Войти / выбрать аккаунт", body)
+        self.assertIn('href="/auth/login?force_confirm=yes"', body)
+        self.assertNotIn('href="/auth/login">Войти</a>', body)
 
     def test_logged_out_page_explains_access_denied(self):
         handler, _ = self.make_handler("/auth/logged-out?reason=access-denied")
