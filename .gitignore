@@ -2,6 +2,7 @@ person_data
 *.png
 *.svg
 source.txt
+*.ged
 
 
 # Byte-compiled / optimized / DLL files

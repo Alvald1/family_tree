@@ -611,12 +611,19 @@ class FamilyTreeBuilder:
                 continue
 
             relation_match = re.match(
-                r'^(\d+)\s*(?:--|->)\s*(\?|\d+)(?:\s*\(([^)]*)\))?$', line)
+                r'^(\d+)\s*(--|->)\s*(\?|\d+)(?:\s*\(([^)]*)\))?$', line)
             if relation_match:
                 parent1 = int(relation_match.group(1))
-                parent2_str = relation_match.group(2)
+                relation_operator = relation_match.group(2)
+                parent2_str = relation_match.group(3)
                 children_str = relation_match.group(
-                    3) if relation_match.group(3) is not None else None
+                    4) if relation_match.group(4) is not None else None
+
+                if relation_operator == '->':
+                    if parent2_str.isdigit():
+                        self.single_parent_children.append(
+                            (parent1, int(parent2_str)))
+                    continue
 
                 if parent2_str == '?':
                     unknown_id = self._get_next_unknown_id()
