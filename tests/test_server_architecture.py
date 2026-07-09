@@ -396,6 +396,9 @@ class AuthGuardTest(unittest.TestCase):
         self.assertEqual(handler.responses, [200])
         self.assertIn("Доступа нет", body)
         self.assertIn("не добавлен в список доступа", body)
+        self.assertIn("https://passport.yandex.ru/passport?mode=logout", body)
+        self.assertIn("retpath=https%3A%2F%2Fdrevo.gribovka.ru%2Fauth%2Flogin", body)
+        self.assertNotIn('href="/auth/login">Войти другим аккаунтом</a>', body)
 
     def test_disallowed_yandex_login_redirects_to_access_denied_logout_page(self):
         handler, auth = self.make_handler("/auth/callback?state=state-value&code=code-value")

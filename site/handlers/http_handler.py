@@ -4,7 +4,7 @@ import http.server
 import secrets
 import time
 from collections import defaultdict, deque
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 from utils.file_utils import serve_file, ensure_directories_exist
 from utils.response_utils import setup_cors_headers
 from api.person_api import PersonAPI
@@ -291,6 +291,11 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             else "Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID снова."
         )
         button_text = "Войти другим аккаунтом" if access_denied else "Войти"
+        login_url = (
+            PersonalDataHandler.yandex_account_logout_url(self)
+            if access_denied
+            else "/auth/login"
+        )
         body = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -303,7 +308,7 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     <main class="auth-status-card">
         <h1>{title}</h1>
         <p>{message}</p>
-        <a class="btn" href="/auth/login">{button_text}</a>
+        <a class="btn" href="{login_url}">{button_text}</a>
     </main>
 </body>
 </html>
@@ -314,6 +319,18 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)
+
+    def yandex_account_logout_url(self):
+        redirect_uri = urlparse(self.auth.config.redirect_uri)
+        if redirect_uri.scheme and redirect_uri.netloc:
+            retpath = f"{redirect_uri.scheme}://{redirect_uri.netloc}/auth/login"
+        elif self.headers.get("Host"):
+            proto = self.headers.get("X-Forwarded-Proto", "http").split(",")[0].strip()
+            retpath = f"{proto}://{self.headers.get('Host')}/auth/login"
+        else:
+            retpath = "/auth/login"
+        query = urlencode({"mode": "logout", "retpath": retpath})
+        return f"https://passport.yandex.ru/passport?{query}"
 
     def handle_api_get(self):
         """Обработка GET запросов к API"""
