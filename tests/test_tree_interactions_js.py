@@ -85,6 +85,71 @@ class TreeInteractionsZoomTest(unittest.TestCase):
 
         self.run_node(script)
 
+    def test_tree_viewer_fetches_svg_with_asset_version(self):
+        script = textwrap.dedent(
+            """
+            (async () => {
+            global.window = {};
+            global.document = {
+              getElementById() {
+                return {
+                  innerHTML: '',
+                  querySelector() {
+                    return null;
+                  },
+                };
+              },
+            };
+            global.AppConfig = {
+              files: {
+                familyTreeSvg: 'family_tree_vector.svg',
+              },
+              assets: {
+                version: 'tree-node-id-20260709-1',
+              },
+              viewer: {
+                defaultZoom: 1,
+              },
+              messages: {
+                loading: 'loading',
+                loadError: 'error',
+                fileNotFound: 'missing',
+                networkError: 'network',
+              },
+              icons: {
+                error: 'error',
+              },
+            };
+
+            const fetchedUrls = [];
+            global.Utils = {
+              fetchStatic(url) {
+                fetchedUrls.push(url);
+                return Promise.reject(new Error('stop after fetch url capture'));
+              },
+            };
+
+            const TreeViewer = require('./site/assets/js/tree-viewer.js');
+            const viewer = Object.create(TreeViewer.prototype);
+            viewer.container = document.getElementById('svgContainer');
+            viewer.showLoading = () => {};
+            viewer.showError = () => {};
+
+            await viewer.loadSVG();
+
+            if (fetchedUrls[0] !== 'family_tree_vector.svg?v=tree-node-id-20260709-1') {
+              throw new Error(`unexpected SVG URL: ${fetchedUrls[0]}`);
+            }
+            })().catch((error) => {
+              setTimeout(() => {
+                throw error;
+              }, 0);
+            });
+            """
+        )
+
+        self.run_node(script)
+
     def test_person_nodes_open_context_menu_instead_of_double_click(self):
         script = textwrap.dedent(
             """

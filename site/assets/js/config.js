@@ -15,6 +15,11 @@ const AppConfig = {
         personDataDir: 'person_data'
     },
 
+    // Версия статических ассетов для сброса браузерного кэша после деплоя
+    assets: {
+        version: 'tree-node-id-20260709-1'
+    },
+
     // Настройки просмотрщика дерева
     viewer: {
         minZoom: 0.1,

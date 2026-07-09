@@ -304,7 +304,7 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="stylesheet" href="/assets/css/main.css?v=logout-20260709-2">
+    <link rel="stylesheet" href="/assets/css/main.css?v=tree-node-id-20260709-1">
 </head>
 <body class="auth-status-page">
     <main class="auth-status-card">

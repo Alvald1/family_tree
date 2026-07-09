@@ -30,7 +30,9 @@ class TreeViewer {
         try {
             this.showLoading();
 
-            const response = await Utils.fetchStatic(AppConfig.files.familyTreeSvg);
+            const response = await Utils.fetchStatic(
+                TreeViewer.versionedAssetUrl(AppConfig.files.familyTreeSvg)
+            );
             const svgText = await response.text();
 
             this.container.innerHTML = svgText;
@@ -47,6 +49,14 @@ class TreeViewer {
             console.error('SVG loading error:', error);
             this.showError(error);
         }
+    }
+
+    static versionedAssetUrl(url) {
+        const version = AppConfig.assets?.version;
+        if (!version) return url;
+
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}v=${encodeURIComponent(version)}`;
     }
 
     /**
