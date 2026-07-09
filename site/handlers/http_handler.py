@@ -262,7 +262,11 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
 
         login = str(user_info.get("login", "")).lower()
         if login not in self.auth.config.allowed_logins:
-            self.send_error(403, "Yandex login is not allowed")
+            self.send_response(302)
+            self.send_header("Set-Cookie", self.auth.expired_session_cookie())
+            self.send_header("Set-Cookie", self.auth.expired_state_cookie())
+            self.send_header("Location", "/auth/logged-out?reason=access-denied")
+            self.end_headers()
             return
 
         self.send_response(302)
@@ -278,19 +282,28 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def handle_auth_logged_out(self):
-        body = """<!DOCTYPE html>
+        reason = parse_qs(urlparse(self.path).query).get("reason", [""])[0]
+        access_denied = reason == "access-denied"
+        title = "Доступа нет" if access_denied else "Вы вышли из аккаунта"
+        message = (
+            "Ваш Yandex-логин не добавлен в список доступа к семейному дереву."
+            if access_denied
+            else "Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID снова."
+        )
+        button_text = "Войти другим аккаунтом" if access_denied else "Войти"
+        body = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Выход из аккаунта</title>
+    <title>{title}</title>
     <link rel="stylesheet" href="/assets/css/main.css?v=logout-20260709-2">
 </head>
 <body class="auth-status-page">
     <main class="auth-status-card">
-        <h1>Вы вышли из аккаунта</h1>
-        <p>Сессия семейного дерева завершена. Чтобы вернуться, войдите через Yandex ID снова.</p>
-        <a class="btn" href="/auth/login">Войти</a>
+        <h1>{title}</h1>
+        <p>{message}</p>
+        <a class="btn" href="/auth/login">{button_text}</a>
     </main>
 </body>
 </html>

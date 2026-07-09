@@ -380,6 +380,55 @@ class AuthGuardTest(unittest.TestCase):
         self.assertIn("Вы вышли из аккаунта", body)
         self.assertIn('href="/auth/login"', body)
 
+    def test_logged_out_page_explains_access_denied(self):
+        handler, _ = self.make_handler("/auth/logged-out?reason=access-denied")
+        written = []
+
+        class FakeWriter:
+            def write(self, data):
+                written.append(data)
+
+        handler.wfile = FakeWriter()
+
+        PersonalDataHandler.handle_auth_logged_out(handler)
+
+        body = b"".join(written).decode("utf-8")
+        self.assertEqual(handler.responses, [200])
+        self.assertIn("Доступа нет", body)
+        self.assertIn("не добавлен в список доступа", body)
+
+    def test_disallowed_yandex_login_redirects_to_access_denied_logout_page(self):
+        handler, auth = self.make_handler("/auth/callback?state=state-value&code=code-value")
+        handler.headers["Cookie"] = (
+            f"family_tree_oauth_state={auth.create_state_value('state-value', '/')}"
+        )
+        auth.exchange_code = lambda code: {"access_token": "token-value"}
+        auth.fetch_user_info = lambda token: {"login": "bob"}
+
+        PersonalDataHandler.handle_auth_callback(handler)
+
+        self.assertEqual(handler.responses, [302])
+        self.assertIn(
+            ("Location", "/auth/logged-out?reason=access-denied"),
+            handler.sent_headers,
+        )
+        self.assertTrue(
+            any(
+                name == "Set-Cookie"
+                and "family_tree_session=" in value
+                and "Max-Age=0" in value
+                for name, value in handler.sent_headers
+            )
+        )
+        self.assertTrue(
+            any(
+                name == "Set-Cookie"
+                and "family_tree_oauth_state=" in value
+                and "Max-Age=0" in value
+                for name, value in handler.sent_headers
+            )
+        )
+
     def test_write_request_requires_editor_session(self):
         handler, auth = self.make_handler("/api/person/node7/messages")
         handler.command = "POST"
