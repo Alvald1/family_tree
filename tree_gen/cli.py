@@ -1,5 +1,7 @@
 import os
 from family_tree_builder import FamilyTreeBuilder
+from gedcom_exporter import GedcomExporter
+from gedcom_tree_builder import GedcomTreeBuilder
 
 
 def main():
@@ -22,14 +24,20 @@ def main():
         tree_builder.print_data_analysis()
         tree_builder.print_extended_analysis()
         tree_builder.print_statistics()
-        print("\nСоздание генеалогического дерева...")
+        print("\nСоздание GEDCOM и генеалогического дерева...")
 
         # Определяем директорию для сохранения файлов (там же, где source.txt)
         source_dir = os.path.dirname(os.path.abspath(source_file))
         png_output_path = os.path.join(source_dir, 'family_tree')
 
-        # Создаем PNG файл в корневой директории (только PNG)
-        tree_builder.create_family_tree(png_output_path)
+        gedcom_output_path = os.path.join(source_dir, 'family_tree.ged')
+        GedcomExporter(tree_builder).write_file(gedcom_output_path)
+
+        gedcom_tree_builder = GedcomTreeBuilder()
+        gedcom_tree_builder.parse_gedcom_file(gedcom_output_path)
+
+        # Создаем PNG файл в корневой директории из GEDCOM-модели
+        gedcom_tree_builder.create_family_tree(png_output_path)
 
         # Создаем SVG файл в папке site
         site_dir = os.path.join(source_dir, 'site')
@@ -38,7 +46,7 @@ def main():
         svg_output_path = os.path.join(site_dir, 'family_tree_vector')
 
         # Создаем отдельно SVG файл в папке site
-        tree_builder.create_svg_only(svg_output_path)
+        gedcom_tree_builder.create_svg_only(svg_output_path)
 
         # Удаляем временные DOT файлы
         dot_file = png_output_path  # Graphviz создает файл без расширения
@@ -56,6 +64,7 @@ def main():
         print("\n" + "=" * 50)
         print("ГОТОВО! Созданы следующие файлы:")
         print("📊 Визуализация:")
+        print(f"  - {gedcom_output_path} (GEDCOM 5.5.1)")
         print(f"  - {png_output_path}.png (высокое разрешение 300 DPI)")
         print(f"  - {svg_output_path}.svg (векторный формат в папке site)")
         print("=" * 50)
