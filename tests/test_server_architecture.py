@@ -2,6 +2,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
+import urllib.request
 from unittest.mock import patch
 from pathlib import Path
 
@@ -159,6 +160,41 @@ class YandexIDAuthTest(unittest.TestCase):
         self.assertFalse(auth.can_write("alice"))
         self.assertTrue(auth.can_write("editor"))
         self.assertTrue(auth.can_write("admin"))
+
+    def test_authorization_url_uses_yandex_ru_oauth_endpoint(self):
+        auth = self.auth()
+
+        authorization_url = auth.authorization_url("state-value")
+
+        self.assertTrue(
+            authorization_url.startswith("https://oauth.yandex.ru/authorize?"),
+            authorization_url,
+        )
+
+    def test_token_exchange_uses_yandex_ru_oauth_endpoint(self):
+        auth = self.auth()
+        captured_request = None
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return b'{"access_token":"token"}'
+
+        def fake_urlopen(request, timeout):
+            nonlocal captured_request
+            captured_request = request
+            return FakeResponse()
+
+        with patch.object(urllib.request, "urlopen", fake_urlopen):
+            auth.exchange_code("code-value")
+
+        self.assertIsNotNone(captured_request)
+        self.assertEqual(captured_request.full_url, "https://oauth.yandex.ru/token")
 
 
 class RateLimiterTest(unittest.TestCase):

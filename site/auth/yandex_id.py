@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from http.cookies import SimpleCookie
 
 
-AUTHORIZE_URL = "https://oauth.yandex.com/authorize"
-TOKEN_URL = "https://oauth.yandex.com/token"
+AUTHORIZE_URL = "https://oauth.yandex.ru/authorize"
+TOKEN_URL = "https://oauth.yandex.ru/token"
 USER_INFO_URL = "https://login.yandex.ru/info?format=json"
 
 
