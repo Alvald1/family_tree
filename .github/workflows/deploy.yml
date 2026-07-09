@@ -15,7 +15,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - family-tree
 
     steps:
       - name: Checkout
@@ -36,7 +38,9 @@ jobs:
         run: docker compose config
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - family-tree
     needs: test
     environment: production
 
@@ -44,26 +48,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure SSH
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          : "${SSH_HOST:?SSH_HOST secret is required}"
-          : "${SSH_PRIVATE_KEY:?SSH_PRIVATE_KEY secret is required}"
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
-
       - name: Write production env on server
         shell: bash
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
           FAMILY_TREE_SESSION_SECRET: ${{ secrets.FAMILY_TREE_SESSION_SECRET }}
           YANDEX_ADMIN_LOGINS: ${{ secrets.YANDEX_ADMIN_LOGINS }}
           YANDEX_ALLOWED_LOGINS: ${{ secrets.YANDEX_ALLOWED_LOGINS }}
@@ -73,9 +60,7 @@ jobs:
           YANDEX_REDIRECT_URI: ${{ secrets.YANDEX_REDIRECT_URI }}
         run: |
           set -euo pipefail
-          : "${SSH_HOST:?SSH_HOST secret is required}"
-          : "${SSH_USER:?SSH_USER secret is required}"
-          python - <<'PY' > .env.production
+          python - <<'PY' > /home/user/family_tree/.env.tmp
           import os
 
           required = [
@@ -109,18 +94,14 @@ jobs:
               print(f"{name}={value}")
           PY
 
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" \
-            'umask 077 && cat > /home/user/family_tree/.env.tmp && mv /home/user/family_tree/.env.tmp /home/user/family_tree/.env' \
-            < .env.production
+          chmod 600 /home/user/family_tree/.env.tmp
+          mv /home/user/family_tree/.env.tmp /home/user/family_tree/.env
 
       - name: Deploy on server
         shell: bash
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           set -euo pipefail
-          : "${SSH_HOST:?SSH_HOST secret is required}"
-          : "${SSH_USER:?SSH_USER secret is required}"
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" \
-            'cd /home/user/family_tree && git pull --ff-only && sudo docker compose up -d --build && sudo docker compose ps'
+          cd /home/user/family_tree
+          git pull --ff-only
+          sudo docker compose up -d --build
+          sudo docker compose ps
