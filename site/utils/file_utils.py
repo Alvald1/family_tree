@@ -6,7 +6,7 @@ import urllib.parse
 from pathlib import Path
 
 
-def serve_file(handler, file_path, send_body=True, data_dir=None):
+def serve_file(handler, file_path, send_body=True, data_dir=None, object_storage=None):
     """Обслуживание статических файлов"""
     try:
         clean_path = urllib.parse.unquote(file_path.split("?", 1)[0].lstrip("/"))
@@ -23,6 +23,21 @@ def serve_file(handler, file_path, send_body=True, data_dir=None):
         if full_path != data_root and data_root not in full_path.parents:
             handler.send_error(403, "Доступ запрещен")
             return
+
+        if object_storage and relative_path.startswith("photos/"):
+            stored_object = object_storage.get_object(relative_path)
+            if stored_object:
+                data = stored_object["data"]
+                handler.send_response(200)
+                handler.send_header(
+                    "Content-Type",
+                    stored_object.get("content_type", "application/octet-stream"),
+                )
+                handler.send_header("Content-Length", str(len(data)))
+                handler.end_headers()
+                if send_body:
+                    handler.wfile.write(data)
+                return
 
         if not full_path.exists() or not full_path.is_file():
             print(f"Файл не найден: {full_path}")

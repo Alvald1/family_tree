@@ -19,6 +19,14 @@ from utils.file_utils import serve_file
 from utils.response_utils import setup_cors_headers
 
 
+class FakeReadableObjectStorage:
+    def __init__(self, objects):
+        self.objects = objects
+
+    def get_object(self, key):
+        return self.objects.get(key)
+
+
 class SettingsTest(unittest.TestCase):
     def test_load_settings_reads_site_config_without_losing_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -63,6 +71,28 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(settings.data_dir, Path("/data/person_data"))
             self.assertEqual(settings.source_file, Path("/data/source.txt"))
             self.assertFalse(settings.auth.enabled)
+
+    def test_s3_settings_are_loaded_from_environment(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "FAMILY_TREE_S3_BUCKET": "s3-gribovka",
+                "FAMILY_TREE_S3_ENDPOINT_URL": "https://storage.yandexcloud.net",
+                "AWS_ACCESS_KEY_ID": "access-key",
+                "AWS_SECRET_ACCESS_KEY": "secret-key",
+            },
+            clear=True,
+        ):
+            settings = load_settings(SITE_ROOT)
+
+        self.assertTrue(settings.object_storage.enabled)
+        self.assertEqual(settings.object_storage.bucket, "s3-gribovka")
+        self.assertEqual(
+            settings.object_storage.endpoint_url,
+            "https://storage.yandexcloud.net",
+        )
+        self.assertEqual(settings.object_storage.access_key_id, "access-key")
+        self.assertEqual(settings.object_storage.secret_access_key, "secret-key")
 
     def test_container_runtime_defaults_to_auth_enabled(self):
         with patch.dict("os.environ", {"FAMILY_TREE_CONTAINER_RUNTIME": "true"}, clear=True):
@@ -350,6 +380,53 @@ class FileServingTest(unittest.TestCase):
 
             self.assertEqual(handler.responses, [200])
             self.assertEqual(bytes(handler.body), b"image")
+
+    def test_person_data_serves_photos_from_object_storage(self):
+        class FakeHandler:
+            def __init__(self):
+                self.responses = []
+                self.headers = []
+                self.body = bytearray()
+
+                class Writer:
+                    def __init__(self, outer):
+                        self.outer = outer
+
+                    def write(self, data):
+                        self.outer.body.extend(data)
+
+                self.wfile = Writer(self)
+
+            def send_response(self, code):
+                self.responses.append(code)
+
+            def send_header(self, name, value):
+                self.headers.append((name, value))
+
+            def end_headers(self):
+                pass
+
+            def send_error(self, code, message=None):
+                self.responses.append(code)
+
+        handler = FakeHandler()
+        object_storage = FakeReadableObjectStorage({
+            "photos/node1/face.png": {
+                "data": b"image-from-s3",
+                "content_type": "image/png",
+            }
+        })
+
+        serve_file(
+            handler,
+            "/person_data/photos/node1/face.png",
+            data_dir=Path("/does/not/exist"),
+            object_storage=object_storage,
+        )
+
+        self.assertEqual(handler.responses, [200])
+        self.assertIn(("Content-Type", "image/png"), handler.headers)
+        self.assertEqual(bytes(handler.body), b"image-from-s3")
 
 
 class CachePolicyTest(unittest.TestCase):

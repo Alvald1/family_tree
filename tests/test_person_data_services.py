@@ -15,6 +15,22 @@ from services.photo_service import PhotoService
 from storage.json_store import JsonListStore
 
 
+class FakeObjectStorage:
+    def __init__(self):
+        self.objects = {}
+        self.deleted_keys = []
+
+    def put_bytes(self, key, data, content_type):
+        self.objects[key] = {
+            "data": data,
+            "content_type": content_type,
+        }
+
+    def delete(self, key):
+        self.deleted_keys.append(key)
+        self.objects.pop(key, None)
+
+
 class JsonListStoreTest(unittest.TestCase):
     def test_round_trips_lists_and_creates_parent_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -94,6 +110,48 @@ class PhotoServiceTest(unittest.TestCase):
             self.assertTrue(photo["url"].startswith("/person_data/photos/node9/"))
             self.assertEqual(len(service.get_photos("node9")), 1)
             self.assertTrue((Path(temp_dir) / "node9" / photo["filename"]).exists())
+
+    def test_uploads_photo_to_object_storage_when_configured(self):
+        boundary = "----test-boundary"
+        image_bytes = b"\x89PNG\r\nsample"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="photo"; filename="face.png"\r\n'
+            "Content-Type: image/png\r\n"
+            "\r\n"
+        ).encode("utf-8") + image_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            object_storage = FakeObjectStorage()
+            service = PhotoService(temp_dir, object_storage=object_storage)
+
+            photo = service.upload_photo("node9", body, boundary)
+
+            self.assertEqual(photo["url"], f"/person_data/photos/node9/{photo['filename']}")
+            self.assertEqual(
+                object_storage.objects[f"photos/node9/{photo['filename']}"],
+                {"data": image_bytes, "content_type": "image/png"},
+            )
+            self.assertFalse((Path(temp_dir) / "node9" / photo["filename"]).exists())
+
+    def test_deletes_photo_from_object_storage_when_configured(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            object_storage = FakeObjectStorage()
+            service = PhotoService(temp_dir, object_storage=object_storage)
+            (Path(temp_dir) / "node9.json").write_text(
+                json.dumps([
+                    {
+                        "filename": "face.png",
+                        "url": "/person_data/photos/node9/face.png",
+                    }
+                ]),
+                encoding="utf-8",
+            )
+
+            service.delete_photo("node9", 0)
+
+            self.assertEqual(object_storage.deleted_keys, ["photos/node9/face.png"])
+            self.assertEqual(service.get_photos("node9"), [])
 
     def test_reorder_rejects_mismatched_photo_count(self):
         with tempfile.TemporaryDirectory() as temp_dir:

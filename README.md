@@ -85,6 +85,11 @@ port = 5061       # или другой нужный порт
   - `FAMILY_TREE_PORT`
   - `FAMILY_TREE_DATA_DIR`
   - `FAMILY_TREE_SOURCE_FILE`
+  - `FAMILY_TREE_S3_BUCKET`
+  - `FAMILY_TREE_S3_ENDPOINT_URL`
+  - `FAMILY_TREE_S3_REGION`
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
 
 ## 5. HTTPS и безопасная связь
 
@@ -149,11 +154,47 @@ YANDEX_ADMIN_LOGINS=login2
 docker compose up -d --build
 ```
 
-## 7. Операционная безопасность
+## 7. Приватное S3-хранилище фотографий
+
+Фотографии можно хранить в приватном Yandex Object Storage бакете. Браузер
+продолжает обращаться к сайту по URL вида `/person_data/photos/...`, а backend
+после проверки авторизации читает или пишет объект в S3.
+
+Для production используется бакет:
+
+```text
+s3-gribovka
+```
+
+Минимальные переменные окружения:
+
+```env
+FAMILY_TREE_S3_BUCKET=s3-gribovka
+FAMILY_TREE_S3_ENDPOINT_URL=https://storage.yandexcloud.net
+FAMILY_TREE_S3_REGION=ru-central1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Бакет должен оставаться приватным. CORS не открывает доступ к приватным
+объектам и при текущей схеме backend-proxy не нужен для работы сайта. Если CORS
+настраивается на будущее, используйте минимальное правило:
+
+```text
+Allowed Origins: https://drevo.gribovka.ru
+Allowed Methods: GET, HEAD
+Allowed Headers: *
+Expose Headers: ETag
+MaxAgeSeconds: 3600
+```
+
+## 8. Операционная безопасность
 
 - `person_data` содержит персональные данные и не попадает в git/image. На
   сервере храните этот каталог на зашифрованном volume или диске с ограниченным
-  доступом, делайте резервные копии и проверяйте восстановление.
+  доступом, делайте резервные копии и проверяйте восстановление. При включенном
+  S3 новые фотографии хранятся в приватном бакете, а локальные файлы остаются
+  fallback-источником до завершения миграции.
 - Публично публикуются только порты `80` и `443`; backend доступен только внутри
   Docker-сети.
 - Caddy ограничивает размер HTTP body до `10MB`, backend дополнительно проверяет
@@ -162,7 +203,7 @@ docker compose up -d --build
   digest осознанно и прогоняйте сканирование образов (`trivy`/`grype`) в CI или
   перед деплоем.
 
-## 8. Конфигурация исходных данных (`source.txt`)
+## 9. Конфигурация исходных данных (`source.txt`)
 
 Файл `source.txt` содержит список людей и их родственные связи в формате:
 

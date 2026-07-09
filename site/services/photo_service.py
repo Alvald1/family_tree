@@ -18,10 +18,11 @@ class PhotoService:
         ".webp": "image/webp",
     }
 
-    def __init__(self, photos_dir):
+    def __init__(self, photos_dir, object_storage=None):
         self.photos_dir = Path(photos_dir)
         self.photos_dir.mkdir(parents=True, exist_ok=True)
         self.store = JsonListStore(self.photos_dir)
+        self.object_storage = object_storage
 
     def get_photos(self, person_id):
         """Получение списка фотографий персоны"""
@@ -47,11 +48,14 @@ class PhotoService:
             self._validate_upload(original_filename, file_extension, content_type, file_data)
             unique_filename = f"{uuid.uuid4()}{file_extension}"
 
-            person_photos_dir = self.photos_dir / safe_person_id
-            person_photos_dir.mkdir(parents=True, exist_ok=True)
-
-            file_path = person_photos_dir / unique_filename
-            file_path.write_bytes(file_data)
+            storage_key = self._storage_key(safe_person_id, unique_filename)
+            if self.object_storage:
+                self.object_storage.put_bytes(storage_key, file_data, content_type)
+            else:
+                person_photos_dir = self.photos_dir / safe_person_id
+                person_photos_dir.mkdir(parents=True, exist_ok=True)
+                file_path = person_photos_dir / unique_filename
+                file_path.write_bytes(file_data)
 
             photos = self._load_photos_list(safe_person_id)
             new_photo = {
@@ -78,7 +82,10 @@ class PhotoService:
         photo_to_delete = photos[photo_index]
         if "filename" in photo_to_delete:
             safe_person_id = validate_record_id(person_id)
-            photo_path = self.photos_dir / safe_person_id / Path(photo_to_delete["filename"]).name
+            filename = Path(photo_to_delete["filename"]).name
+            if self.object_storage:
+                self.object_storage.delete(self._storage_key(safe_person_id, filename))
+            photo_path = self.photos_dir / safe_person_id / filename
             if photo_path.exists():
                 photo_path.unlink()
 
@@ -113,6 +120,10 @@ class PhotoService:
     def _save_photos_list(self, person_id, photos):
         """Сохранение списка фотографий"""
         self.store.save(person_id, photos)
+
+    def _storage_key(self, person_id, filename):
+        safe_person_id = validate_record_id(person_id)
+        return f"photos/{safe_person_id}/{Path(filename).name}"
 
     def _parse_multipart(self, post_data, boundary):
         if not boundary:

@@ -12,9 +12,12 @@ class PersonAPI:
     MAX_JSON_BODY_BYTES = 1024 * 1024
     MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024
 
-    def __init__(self, data_dirs, source_file=None):
+    def __init__(self, data_dirs, source_file=None, object_storage=None):
         self.person_service = PersonService(source_file=source_file)
-        self.photo_service = PhotoService(data_dirs['photos'])
+        self.photo_service = PhotoService(
+            data_dirs['photos'],
+            object_storage=object_storage,
+        )
         self.blog_service = BlogService(data_dirs['blog'])
         self.message_service = MessageService(data_dirs['messages'])
 

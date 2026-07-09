@@ -11,6 +11,7 @@ from api.person_api import PersonAPI
 from api.routes import parse_api_path
 from config.settings import load_settings
 from auth.yandex_id import YandexIDAuth
+from storage.object_storage import S3ObjectStorage
 
 
 class RateLimiter:
@@ -39,12 +40,18 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
     person_api = None
     auth = YandexIDAuth(settings.auth)
     rate_limiter = RateLimiter()
+    object_storage = None
 
     @classmethod
     def configure(cls, settings):
         cls.settings = settings
         data_dirs = ensure_directories_exist(settings.data_dir)
-        cls.person_api = PersonAPI(data_dirs, source_file=settings.source_file)
+        cls.object_storage = S3ObjectStorage.from_config(settings.object_storage)
+        cls.person_api = PersonAPI(
+            data_dirs,
+            source_file=settings.source_file,
+            object_storage=cls.object_storage,
+        )
         cls.auth = YandexIDAuth(settings.auth)
 
     def __init__(self, *args, **kwargs):
@@ -68,7 +75,12 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_api_get()
         # Обработка запросов к данным персон (включая фотографии)
         elif self.path.startswith('/person_data/'):
-            serve_file(self, self.path, data_dir=self.settings.data_dir)
+            serve_file(
+                self,
+                self.path,
+                data_dir=self.settings.data_dir,
+                object_storage=self.object_storage,
+            )
         elif self.path == '/':
             self.path = '/index.html'
             super().do_GET()
@@ -85,7 +97,13 @@ class PersonalDataHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
         elif self.path.startswith('/person_data/'):
-            serve_file(self, self.path, send_body=False, data_dir=self.settings.data_dir)
+            serve_file(
+                self,
+                self.path,
+                send_body=False,
+                data_dir=self.settings.data_dir,
+                object_storage=self.object_storage,
+            )
         else:
             super().do_HEAD()
 

@@ -51,7 +51,12 @@ jobs:
       - name: Write production env on server
         shell: bash
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           FAMILY_TREE_SESSION_SECRET: ${{ secrets.FAMILY_TREE_SESSION_SECRET }}
+          FAMILY_TREE_S3_BUCKET: s3-gribovka
+          FAMILY_TREE_S3_ENDPOINT_URL: https://storage.yandexcloud.net
+          FAMILY_TREE_S3_REGION: ru-central1
           YANDEX_ADMIN_LOGINS: ${{ secrets.YANDEX_ADMIN_LOGINS }}
           YANDEX_ALLOWED_LOGINS: ${{ secrets.YANDEX_ALLOWED_LOGINS }}
           YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
@@ -64,6 +69,8 @@ jobs:
           import os
 
           required = [
+              "AWS_ACCESS_KEY_ID",
+              "AWS_SECRET_ACCESS_KEY",
               "FAMILY_TREE_SESSION_SECRET",
               "YANDEX_ALLOWED_LOGINS",
               "YANDEX_CLIENT_ID",
@@ -71,7 +78,12 @@ jobs:
               "YANDEX_REDIRECT_URI",
           ]
           names = [
+              "AWS_ACCESS_KEY_ID",
+              "AWS_SECRET_ACCESS_KEY",
               "FAMILY_TREE_SESSION_SECRET",
+              "FAMILY_TREE_S3_BUCKET",
+              "FAMILY_TREE_S3_ENDPOINT_URL",
+              "FAMILY_TREE_S3_REGION",
               "YANDEX_ADMIN_LOGINS",
               "YANDEX_ALLOWED_LOGINS",
               "YANDEX_CLIENT_ID",
