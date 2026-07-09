@@ -53,7 +53,7 @@ class TreeViewer {
         this.svg.setAttribute('width', '100%');
         this.svg.setAttribute('height', 'auto');
         this.svg.style.display = 'block';
-        this.svg.style.transformOrigin = 'center center';
+        this.svg.style.transformOrigin = '0 0';
 
         this.addPersonClickHandlers();
         this.updateTransform();
