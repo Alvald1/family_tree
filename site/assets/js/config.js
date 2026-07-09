@@ -20,7 +20,8 @@ const AppConfig = {
         minZoom: 0.1,
         maxZoom: 5,
         zoomStep: 0.1,
-        wheelZoomSensitivity: 0.1,
+        wheelZoomSensitivity: 0.0025,
+        wheelZoomMaxStep: 0.04,
         defaultZoom: 1,
         saveStateEnabled: true,
         stateExpirationTime: 60 * 60 * 1000 // 1 час

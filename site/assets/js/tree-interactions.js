@@ -25,7 +25,7 @@ class TreeInteractions {
         this.container.addEventListener('wheel', (e) => {
             e.preventDefault();
 
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const delta = TreeInteractions.getWheelZoomFactor(e);
             this.viewer.zoom(delta, e.clientX, e.clientY);
         });
 
@@ -57,6 +57,29 @@ class TreeInteractions {
         this.container.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
+    }
+
+    static getWheelZoomFactor(event, options = {}) {
+        const sensitivity = options.sensitivity ?? AppConfig.viewer.wheelZoomSensitivity;
+        const maxStep = options.maxStep ?? AppConfig.viewer.wheelZoomMaxStep;
+        const normalizedDelta = TreeInteractions.normalizeWheelDelta(event);
+        const rawFactor = Math.exp(-normalizedDelta * sensitivity);
+        return Utils.clamp(rawFactor, 1 - maxStep, 1 + maxStep);
+    }
+
+    static normalizeWheelDelta(event) {
+        const lineMode = typeof WheelEvent !== 'undefined' ? WheelEvent.DOM_DELTA_LINE : 1;
+        const pageMode = typeof WheelEvent !== 'undefined' ? WheelEvent.DOM_DELTA_PAGE : 2;
+        const lineHeight = 16;
+        const pageHeight = window.innerHeight || 800;
+
+        if (event.deltaMode === lineMode) {
+            return event.deltaY * lineHeight;
+        }
+        if (event.deltaMode === pageMode) {
+            return event.deltaY * pageHeight;
+        }
+        return event.deltaY;
     }
 
     /**
