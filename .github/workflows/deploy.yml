@@ -1,0 +1,126 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Validate compose config
+        run: docker compose config
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?SSH_HOST secret is required}"
+          : "${SSH_PRIVATE_KEY:?SSH_PRIVATE_KEY secret is required}"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Write production env on server
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          FAMILY_TREE_SESSION_SECRET: ${{ secrets.FAMILY_TREE_SESSION_SECRET }}
+          YANDEX_ADMIN_LOGINS: ${{ secrets.YANDEX_ADMIN_LOGINS }}
+          YANDEX_ALLOWED_LOGINS: ${{ secrets.YANDEX_ALLOWED_LOGINS }}
+          YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
+          YANDEX_CLIENT_SECRET: ${{ secrets.YANDEX_CLIENT_SECRET }}
+          YANDEX_EDITOR_LOGINS: ${{ secrets.YANDEX_EDITOR_LOGINS }}
+          YANDEX_REDIRECT_URI: ${{ secrets.YANDEX_REDIRECT_URI }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?SSH_HOST secret is required}"
+          : "${SSH_USER:?SSH_USER secret is required}"
+          python - <<'PY' > .env.production
+          import os
+
+          required = [
+              "FAMILY_TREE_SESSION_SECRET",
+              "YANDEX_ALLOWED_LOGINS",
+              "YANDEX_CLIENT_ID",
+              "YANDEX_CLIENT_SECRET",
+              "YANDEX_REDIRECT_URI",
+          ]
+          names = [
+              "FAMILY_TREE_SESSION_SECRET",
+              "YANDEX_ADMIN_LOGINS",
+              "YANDEX_ALLOWED_LOGINS",
+              "YANDEX_CLIENT_ID",
+              "YANDEX_CLIENT_SECRET",
+              "YANDEX_EDITOR_LOGINS",
+              "YANDEX_REDIRECT_URI",
+          ]
+
+          print("FAMILY_TREE_AUTH_ENABLED=true")
+          print("FAMILY_TREE_CONTAINER_RUNTIME=true")
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise ValueError(
+                  "Required production secrets are missing: " + ", ".join(missing)
+              )
+          for name in names:
+              value = os.environ.get(name, "")
+              if "\n" in value or "\r" in value:
+                  raise ValueError(f"{name} must be a single-line value")
+              print(f"{name}={value}")
+          PY
+
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" \
+            'umask 077 && cat > /home/user/family_tree/.env.tmp && mv /home/user/family_tree/.env.tmp /home/user/family_tree/.env' \
+            < .env.production
+
+      - name: Deploy on server
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?SSH_HOST secret is required}"
+          : "${SSH_USER:?SSH_USER secret is required}"
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" \
+            'cd /home/user/family_tree && git pull --ff-only && sudo docker compose up -d --build && sudo docker compose ps'
