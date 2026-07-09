@@ -60,7 +60,7 @@ jobs:
           YANDEX_REDIRECT_URI: ${{ secrets.YANDEX_REDIRECT_URI }}
         run: |
           set -euo pipefail
-          python - <<'PY' > /home/user/family_tree/.env.tmp
+          python3 - <<'PY' > /home/user/family_tree/.env.tmp
           import os
 
           required = [
